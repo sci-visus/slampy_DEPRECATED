@@ -8,13 +8,13 @@ import json
 import datetime
 import importlib
 
-from OpenVisus                   import *
-from OpenVisus.PyImage           import *
+from OpenVisus                       import *
 
 from slampy.multi_sensor_alignment   import *
 from slampy.google_maps              import *
 from slampy.gps_utils                import *
 from slampy.metadata_reader          import *
+from slampy.image_utils              import *
 
 # ///////////////////////////////////////////////////////////////////
 class PythonSlamImage:

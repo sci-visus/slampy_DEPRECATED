@@ -8,7 +8,6 @@ import threading
 import time
 
 from OpenVisus                        import *
-from OpenVisus.PyImage                import *
 
 from PyQt5 import QtCore 
 from PyQt5.QtCore                     import QUrl
@@ -20,7 +19,8 @@ from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
 from VisusGuiPy import *
 
 from slampy.extract_keypoints import *
-from slampy.gui_utils         import *	
+from slampy.gui_utils         import *
+from slampy.image_utils       import *
 
 
 # ///////////////////////////////////////////////////////////////////

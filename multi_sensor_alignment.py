@@ -6,11 +6,11 @@ import time
 import math
 import pickle
 
-from OpenVisus              import *
-from OpenVisus.PyImage      import *
+from OpenVisus                import *
 
 from slampy.extract_keypoints import *
 from slampy.find_matches      import *
+from slampy.image_utils       import *
 
 
 # ////////////////////////////////////////////////////////////////////////

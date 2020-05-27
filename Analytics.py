@@ -14,7 +14,7 @@ from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
 
-from OpenVisus.PyImage import *
+from slampy.image_utils import *
 
 # //////////////////////////////////////////////////////////////////////
 def CreateColorMap(colors, position=None, bit=False):

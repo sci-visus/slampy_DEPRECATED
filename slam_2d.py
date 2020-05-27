@@ -9,7 +9,6 @@ import time
 from PyQt5.QtWebEngineWidgets import QWebEngineView	
 
 from OpenVisus                        import *
-from OpenVisus.PyImage                import *
 from VisusGuiPy                       import *
 
 from PyQt5 import QtCore 
@@ -25,6 +24,7 @@ from slampy.gps_utils         import *
 from slampy.find_matches      import *
 from slampy.gui_utils         import *
 from slampy.image_provider    import *
+from slampy.image_utils       import *
 
 # ///////////////////////////////////////////////////////////////////
 def ComposeImage(v, axis):

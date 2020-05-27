@@ -1,6 +1,6 @@
 
 from OpenVisus              import *
-from OpenVisus.PyImage      import *
+from slampy.image_utils     import *
 
 import cv2
 import numpy

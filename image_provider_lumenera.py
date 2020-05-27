@@ -3,9 +3,8 @@
 import tifffile
 import cv2
 
-from OpenVisus.PyImage import *
-
 from slampy.image_provider import *
+from slampy.image_utils    import *
 
 # ///////////////////////////////////////////////////////////////////////////////////////////////
 class ImageProviderLumenera(ImageProvider):
