@@ -20,8 +20,8 @@ python -m pip install git+https://github.com/sci-visus/slampy
 
    
 # ON MACOS ONLY, you may need to solve conflicts between Qt embedded in opencv2 and PyQt5 we are going to use:
-python -m pip uninstall -y opencv-python          opencv-contrib-python
+python -m pip uninstall -y opencv-python opencv-contrib-python opencv-python-headless opencv-contrib-python-headless
 python -m pip install      opencv-python-headless opencv-contrib-python-headless 
 
-python -m slam
+python -m slampy
 ```

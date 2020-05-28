@@ -4,10 +4,6 @@ import os, sys,argparse
 # ////////////////////////////////////////////////
 def Main(args):
 	
-	# no arguments
-	if len(args)<=1:
-		sys.exit(0)	
-		
 	parser = argparse.ArgumentParser(description="slam command.")
 	parser.add_argument("--dim", type=int, help="Dimension of the dataset.", required=False,default=2)
 	parser.add_argument("--directory", type=str, help="Directory of the dataset.", required=False,default="")
