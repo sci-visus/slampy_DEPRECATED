@@ -1,13 +1,22 @@
-from setuptools import setup, find_packages
+import sys,os,setuptools
 
-setup(
+def FindFiles():
+	ret=[]	
+	for dirpath, __dirnames__, filenames in os.walk("."):
+		for it in filenames:
+			ret.append(os.path.abspath(os.path.join(dirpath, it)))	
+	return ret
+
+setuptools.setup(
 	name='slampy',
-	version='1.0.0',
+	version='1.0.1',
 	url='https://github.com/sci-visus/slampy',
-	author='ViSUS',
-	author_email='scrgiorgio@gmail.com',
+	author="visus.net",
+	author_email="support@visus.net",
 	description='slampy',
-	packages=find_packages(),
+	packages=['slampy'],
+	package_dir={'slampy':'.'},
+	package_data={'slampy': FindFiles()},
 	install_requires=[
 		'numpy', 
 		'matplotlib',
