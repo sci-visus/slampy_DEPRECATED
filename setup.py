@@ -7,26 +7,21 @@ this_dir=os.path.dirname(os.path.abspath(__file__))
 
 # /////////////////////////////////////////////////////////////
 def FindFiles():
-	# this are cached directories that should not be part of OpenVisus distribution
-	shutil.rmtree('./build', ignore_errors=True)	
-	shutil.rmtree('./dist', ignore_errors=True)	
-	shutil.rmtree('./.git', ignore_errors=True)	
-	shutil.rmtree('./{}.egg-info'.format(PROJECT_NAME), ignore_errors=True)	
 
-	files=[]	
+	ret=[]	
 	for dirpath, __dirnames__, filenames in os.walk("."):
 		for it in filenames:
 			filename= os.path.abspath(os.path.join(dirpath, it))
 			
-			if "__pycache__" in filename: 
+			if "__pycache__" in filename or "egg-info" in filename or ".git" in filename: 
 				continue
-			
+
 			if os.path.splitext(filename)[1] in [".ilk",".pdb",".pyc",".pyo"]: 
 				continue
 				
-			files.append(filename)	
+			ret.append(filename)	
 			
-	return files
+	return ret
 
 setuptools.setup(
 	name=PROJECT_NAME,
