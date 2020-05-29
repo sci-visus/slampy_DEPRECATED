@@ -53,6 +53,20 @@ def InterleaveChannels(channels):
 
 	return ret 
 	
+# ////////////////////////////////////////////////////////////////////////////////
+def NormalizeImage32f(src):
+		
+	if len(src.shape)<3:
+		dst = numpy.zeros(src.shape, dtype=numpy.float32)
+		m,M=ComputeImageRange(src)
+		delta=(M-m)
+		if delta==0.0: delta=1.0
+		return (src.astype('float32')-m)*(1.0/delta)
+			
+	dst = numpy.zeros(src.shape, dtype=numpy.float32)
+	for C in range(src.shape[2]):
+		dst[:,:,C]=NormalizeImage32f(src[:,:,C])
+	return dst
 
 # ////////////////////////////////////////////////////////////////////////////////
 def ConvertImageToGrayScale(img):
