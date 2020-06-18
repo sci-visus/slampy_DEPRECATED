@@ -128,7 +128,7 @@ class Slam3D(Slam):
 
 				if ConvertToIdx:
 					dataset = LoadDataset(idx_filename)
-					dataset.compressDataset(["zip"],full)
+					dataset.compressDataset(["zip"],Array.fromNumPy(full,TargetDim=3, bShareMem=True))
 
 				energy=ConvertImageToGrayScale(full)
 				energy=ResizeImage(energy, self.energy_size)
