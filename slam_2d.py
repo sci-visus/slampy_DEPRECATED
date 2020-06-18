@@ -9,7 +9,7 @@ import time
 from PyQt5.QtWebEngineWidgets import QWebEngineView	
 
 from OpenVisus                        import *
-from VisusGuiPy                       import *
+from OpenVisus.gui                    import *
 
 from PyQt5 import QtCore 
 from PyQt5.QtCore                     import QUrl
@@ -78,17 +78,17 @@ class Slam2D(Slam):
 		super().addCamera(camera)
 		return camera
 
-	# saveIdx
-	def saveIdx(self,camera):
-		idxfile = IdxFile()
+	# createIdx
+	def createIdx(self, camera):
+		camera.idx_filename="./idx/{:04d}.idx".format(camera.id)
 		field=Field("myfield", self.dtype)
-		field.default_layout = "rowmajor"
-		idxfile.fields.push_back(field)
-		idxfile.logic_box = BoxNi(PointNi(0,0), PointNi(self.width, self.height))
-		idxfile.blocksperfile = -1 # one file per dataset
-		idxfile.filename_template="./%04d.bin" % (camera.id,)
-		camera.idx_filename="./idx/%04d.idx" % (camera.id,)
-		idxfile.save(self.cache_dir + "/" + camera.idx_filename)
+		field.default_layout="row_major"
+		CreateIdx(url=self.cache_dir + "/" + camera.idx_filename, 
+				dim=2,
+				filename_template="./{:04d}.bin".format(camera.id), 
+				blocksperfile=-1,
+				fields=[field],
+				dims=(self.width, self.height))
 
 	# generateImage
 	def generateImage(self,img):
@@ -399,8 +399,8 @@ class Slam2D(Slam):
 		self.debugSolution()
 		self.debugMatchesGraph()
 
-	# extractKeyPoints
-	def extractKeyPoints(self):
+	# convertToIdxAndExtractKeyPoints
+	def convertToIdxAndExtractKeyPoints(self):
 
 		t1=Time.now()
 
@@ -419,12 +419,12 @@ class Slam2D(Slam):
 			idx_filename      = self.cache_dir+"/" + camera.idx_filename
 
 			if not self.loadKeyPoints(camera,keypoint_filename) or not os.path.isfile(idx_filename):
+
 				full = self.generateImage(img)
 				Assert(isinstance(full, numpy.ndarray))
 
 				dataset = LoadDataset(idx_filename)
-				dataset.writeFullResolutionData(dataset.createAccess(), dataset.getDefaultField(), dataset.getDefaultTime(), Array.fromNumPy(full,TargetDim=2), dataset.getLogicBox())
-				dataset.compressDataset("lz4") # lz4 creates files too big (ratio 0.90 vs 0.75) but zip seems a little slow (need to do some speed test)
+				dataset.compressDataset(["zip"],Array.fromNumPy(full,TargetDim=2, bShareMem=True)) # write zipped full 
 
 				energy=ConvertImageToGrayScale(full)
 				energy=ResizeImage(energy, self.energy_size)
@@ -511,15 +511,17 @@ class Slam2D(Slam):
 		self.debugMatchesGraph()
 		self.debugSolution()
 
-	# refineSolution
-	def refineSolution(self):
+	# run
+	def run(self):
 
+		# if it's the first time, I need to find key point matches
 		if self.cameras[0].keypoints.size()==0:
-			self.extractKeyPoints()
+			self.convertToIdxAndExtractKeyPoints()
 			self.findAllMatches()
 			self.removeDisconnectedCameras()
 			self.debugMatchesGraph()
 
+		# bundle adjustment
 		tolerances=(10.0*self.ba_tolerance,1.0*self.ba_tolerance)
 		self.startAction(len(tolerances),"Refining solution...")
 		for I,tolerance in enumerate(tolerances):
@@ -529,7 +531,6 @@ class Slam2D(Slam):
 			self.removeDisconnectedCameras()
 			self.removeCamerasWithTooMuchSkew()
 		self.endAction()
-
 		self.saveMidx()
 		print("Finished")
 
@@ -583,8 +584,7 @@ class Slam2DWindow(QMainWindow):
 		
 		# toolbar
 		toolbar=QHBoxLayout()
-		self.buttons.run_slam=CreatePushButton("Run",
-			lambda: self.run())
+		self.buttons.run_slam=CreatePushButton("Run",lambda: self.run())
 				
 		toolbar.addWidget(self.buttons.run_slam)
 		toolbar.addLayout(self.progress_bar)
@@ -604,6 +604,12 @@ class Slam2DWindow(QMainWindow):
 		central_widget.setLayout(main_layout)
 		central_widget.setFrameShape(QFrame.NoFrame)
 		self.setCentralWidget(central_widget)
+
+	# run
+	def run(self):
+		self.slam.run()
+		self.preview.hide()
+		self.refreshViewer()
 
 	# processEvents
 	def processEvents(self):
@@ -668,7 +674,7 @@ class Slam2DWindow(QMainWindow):
 		self.processEvents()
 
 	# setCurrentDir
-	def setCurrentDir(self,image_dir):
+	def setCurrentDir(self, image_dir):
 		
 		# avoid recursions
 		if self.image_directory==image_dir:
@@ -701,14 +707,18 @@ class Slam2DWindow(QMainWindow):
 
 		for img in self.provider.images:
 			camera=self.slam.addCamera(img)
-			self.slam.saveIdx(camera)
+			self.slam.createIdx(camera)
 
 		self.slam.initialSetup()
 		self.refreshGoogleMaps()
 		self.refreshViewer()
 
-		self.setWindowTitle("%s num_images(%d) width(%d) height(%d) dtype(%s) " % (
-			self.image_directory, len(self.provider.images),self.slam.width, self.slam.height, self.slam.dtype.toString()))
+		self.setWindowTitle("{} num_images({}) width({}) height({}) dtype({}) ".format(
+			image_dir, 
+			len(self.provider.images),
+			self.slam.width, 
+			self.slam.height, 
+			self.slam.dtype.toString()))
 
 	# refreshViewer
 	def refreshViewer(self,fieldname="output=ArrayUtils.interleave(ArrayUtils.split(voronoi())[0:3])"):
@@ -752,88 +762,4 @@ output=Array.fromNumPy(img,TargetDim=pdim)
 		SaveTextDocument(filename,content)
 		self.google_maps.load(QUrl.fromLocalFile(filename))	
 
-	# run
-	def run(self):
-		self.slam.refineSolution()
-		self.preview.hide()
-		self.refreshViewer()
 
-
-# //////////////////////////////////////////////////////////////////////////////
-class Logger(QtCore.QObject):
-
-	"""Redirects console output to text widget."""
-	my_signal = QtCore.pyqtSignal(str)
-
-	# constructor
-	def __init__(self, terminal=None, filename="", qt_callback=None):
-		super().__init__()
-		self.terminal=terminal
-		self.log=open(filename,'w')
-		self.my_signal.connect(qt_callback)
-
-	# write
-	def write(self, message):
-		message=message.replace("\n", "\n" + str(datetime.datetime.now())[0:-7] + " ")
-		self.terminal.write(message)
-		self.log.write(message)
-		self.my_signal.emit(str(message))
-
-	# flush
-	def flush(self):
-		self.terminal.flush()
-		self.log.flush()
-
-# ////////////////////////////////////////////////////////////////////////////////////////////
-class ExceptionHandler(QtCore.QObject):
-
-	# __init__
-	def __init__(self):
-		super(ExceptionHandler, self).__init__()
-		sys.__excepthook__ = sys.excepthook
-		sys.excepthook = self.handler
-
-	# handler
-	def handler(self, exctype, value, traceback):
-		sys.stdout=sys.__stdout__
-		sys.stderr=sys.__stderr__
-		sys.excepthook=sys.__excepthook__
-		sys.excepthook(exctype, value, traceback)
-
-# ////////////////////////////////////////////////////////////////////////////////////////////
-def Main(dir=None):
-
-	# set PYTHONPATH=D:\projects\OpenVisus\build\RelWithDebInfo
-	# example: -m OpenVisus slam    "D:\GoogleSci\visus_slam\TaylorGrant"
-	# example: -m OpenVisus slam3d  "D:\GoogleSci\visus_dataset\male\RAW\Fullcolor\fullbody"
-
-	# since I'm writing data serially I can disable locks
-	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
-	
-	ShowSplash()
-
-	win=Slam2DWindow()
-	#win.resize(1280,1024)
-	#win.show()
-	win.showMaximized()
-
-	_stdout = sys.stdout
-	_stderr = sys.stderr
-
-	logger=Logger(terminal=sys.stdout, filename="~visusslam.log", qt_callback=win.printLog)
-
-	sys.stdout = logger
-	sys.stderr = logger
-
-	if dir:
-		win.setCurrentDir(dir)
-	else:
-		win.chooseDirectory()
-
-	exception_handler = ExceptionHandler()
-
-	HideSplash()
-	QApplication.instance().exec()
-
-	sys.stdout = _stdout
-	sys.stderr = _stderr	

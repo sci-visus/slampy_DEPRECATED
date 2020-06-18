@@ -7,8 +7,6 @@ import random
 import threading
 import time
 
-from OpenVisus                        import *
-
 from PyQt5 import QtCore 
 from PyQt5.QtCore                     import QUrl
 from PyQt5.QtWidgets                  import QApplication, QHBoxLayout, QLineEdit
@@ -16,7 +14,8 @@ from PyQt5.QtWidgets                  import QMainWindow, QPushButton, QVBoxLayo
 from PyQt5.QtWidgets                  import QWidget
 from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
 
-from VisusGuiPy import *
+from OpenVisus                        import *
+from OpenVisus.gui                    import *
 
 from slampy.extract_keypoints import *
 from slampy.gui_utils         import *
@@ -129,8 +128,7 @@ class Slam3D(Slam):
 
 				if ConvertToIdx:
 					dataset = LoadDataset(idx_filename)
-					dataset.writeFullResolutionData(dataset.createAccess(), dataset.getDefaultField(), dataset.getDefaultTime(), Array.fromNumPy(full,TargetDim=2), dataset.getLogicBox())
-					dataset.compressDataset("lz4") # lz4 creates files too big (ratio 0.90 vs 0.75) but zip seems a little slow (need to do some speed test)
+					dataset.compressDataset(["zip"],full)
 
 				energy=ConvertImageToGrayScale(full)
 				energy=ResizeImage(energy, self.energy_size)
@@ -507,84 +505,4 @@ class Slam3DWindow(QMainWindow):
 		self.refreshViewer()
 
 
-# //////////////////////////////////////////////////////////////////////////////
-class Logger(QtCore.QObject):
-
-	"""Redirects console output to text widget."""
-	my_signal = QtCore.pyqtSignal(str)
-
-	# constructor
-	def __init__(self, terminal=None, filename="", qt_callback=None):
-		super().__init__()
-		self.terminal=terminal
-		self.log=open(filename,'w')
-		self.my_signal.connect(qt_callback)
-
-	# write
-	def write(self, message):
-		message=message.replace("\n", "\n" + str(datetime.datetime.now())[0:-7] + " ")
-		self.terminal.write(message)
-		self.log.write(message)
-		self.my_signal.emit(str(message))
-
-	# flush
-	def flush(self):
-		self.terminal.flush()
-		self.log.flush()
-
-
-# ////////////////////////////////////////////////////////////////////////////////////////////
-class ExceptionHandler(QtCore.QObject):
-
-	# __init__
-	def __init__(self):
-		super(ExceptionHandler, self).__init__()
-		sys.__excepthook__ = sys.excepthook
-		sys.excepthook = self.handler
-
-	# handler
-	def handler(self, exctype, value, traceback):
-		sys.stdout=sys.__stdout__
-		sys.stderr=sys.__stderr__
-		sys.excepthook=sys.__excepthook__
-		sys.excepthook(exctype, value, traceback)
-
-# ////////////////////////////////////////////////////////////////////////////////////////////
-def Main(dir):
-	
-	# set PYTHONPATH=D:\projects\OpenVisus\build\RelWithDebInfo
-	# example: -m OpenVisus slam    "D:\GoogleSci\visus_slam\TaylorGrant"
-	# example: -m OpenVisus slam3d  "D:\GoogleSci\visus_dataset\male\RAW\Fullcolor\fullbody"
-
-	# since I'm writing data serially I can disable locks
-	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
-	
-	ShowSplash()
-	
-	win=Slam3DWindow()
-
-	#win.resize(1280,1024)
-	#win.show()
-	win.showMaximized()
-
-	_stdout = sys.stdout
-	_stderr = sys.stderr
-
-	logger=Logger(terminal=sys.stdout, filename="~visusslam.log", qt_callback=win.printLog)
-
-	sys.stdout = logger
-	sys.stderr = logger
-
-	if dir:
-		win.setCurrentDir(dir)
-	else:
-		win.chooseDirectory()
-
-	exception_handler = ExceptionHandler()
-
-	HideSplash()
-	QApplication.instance().exec()
-
-	sys.stdout = _stdout
-	sys.stderr = _stderr	
 	
