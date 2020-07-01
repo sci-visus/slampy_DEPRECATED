@@ -4,7 +4,11 @@ import time
 from PyQt5 import Qt,QtCore,QtGui,QtWidgets
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import PyQt5.sip as sip
+
+try:
+    from PyQt5 import sip as  sip
+except ImportError:
+    import sip
 
 from slampy.image_utils import *
 
