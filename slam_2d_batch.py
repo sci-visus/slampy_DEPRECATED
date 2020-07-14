@@ -15,9 +15,10 @@ import datetime
 class Slam2Dbatch():
 
 	# constructor
-	def __init__(self):
+	def __init__(self, color_matching=False):
 		self.image_directory=""
 		self.cache_dir=""
+		self.color_matching=color_matching
 
 	# generateImage
 	def generateImage(self,img):
@@ -50,7 +51,7 @@ class Slam2Dbatch():
 		height = array.getHeight()
 		dtype  = array.dtype
 
-		self.slam=Slam2D(width,height,dtype, self.provider.calibration,self.cache_dir)
+		self.slam=Slam2D(width,height,dtype, self.provider.calibration,self.cache_dir,color_matching=self.color_matching)
 		self.slam.debug_mode=False
 		self.slam.generateImage=self.generateImage
 
@@ -75,7 +76,7 @@ def Main(args):
 	# since I'm writing data serially I can disable locks
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
 
-	batch = Slam2Dbatch()
+	batch = Slam2Dbatch(color_matching=True)
 	batch.setCurrentDir(args.directory)
 	batch.run()
 	

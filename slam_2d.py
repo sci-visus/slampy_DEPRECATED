@@ -45,7 +45,11 @@ def ComposeImage(v, axis):
 class Slam2D(Slam):
 
 	# constructor
-	def __init__(self,width,height,dtype,calibration,cache_dir):
+	def __init__(self,width,height,dtype,calibration,cache_dir,
+								generate_bbox=False,
+								color_matching=False,
+								blending_exp="output=voronoi()"):
+
 		super(Slam2D,self).__init__()
 
 		self.width              = width
@@ -66,6 +70,10 @@ class Slam2D(Slam):
 
 		self.images             = []
 		self.extractor          = None
+
+		self.generate_bbox      = generate_bbox
+		self.color_matching     = color_matching
+		self.blending_exp       = blending_exp
 
 	# addCamera
 	def addCamera(self,img):
@@ -273,14 +281,14 @@ class Slam2D(Slam):
 			cstring(self.width),cstring(self.height),self.dtype.toString(),
 			cstring(self.calibration.f),cstring(self.calibration.cx),cstring(self.calibration.cy)))
 		lines.append("")
-		lines.append("<field name='voronoi'><code>output=voronoi()</code></field>")
+		lines.append("<field name='blend'><code>"+self.blending_exp+"</code></field>")
 		lines.append("")
 		lines.append("<translate x='%s' y='%s'>" % (cstring10(physic_box.p1[0]),cstring10(physic_box.p1[1])))
 		lines.append("<scale     x='%s' y='%s'>" % (cstring10(physic_box.size()[0]/logic_box.size()[0]),cstring10(physic_box.size()[1]/logic_box.size()[1])))
 		lines.append("<translate x='%s' y='%s'>" % (cstring10(-logic_box.p1[0]),cstring10(-logic_box.p1[1])))
 		lines.append("")
 
-		if True:
+		if self.generate_bbox:
 			W=int(1024)
 			H=int(W*(logic_box.size()[1]/float(logic_box.size()[0])))
 
@@ -399,6 +407,53 @@ class Slam2D(Slam):
 		self.debugSolution()
 		self.debugMatchesGraph()
 
+	def convertAndExtract(args):
+		I, (img, camera) = args
+
+		self.advanceAction(I)
+
+		# create idx and extract keypoints
+		keypoint_filename = self.cache_dir+"/keypoints/%04d" % (camera.id,)
+		idx_filename      = self.cache_dir+"/" + camera.idx_filename
+
+		if not self.loadKeyPoints(camera,keypoint_filename) or not os.path.isfile(idx_filename):
+
+			full = self.generateImage(img)
+			Assert(isinstance(full, numpy.ndarray))
+
+			dataset = LoadDataset(idx_filename)
+			dataset.compressDataset(["zip"],Array.fromNumPy(full,TargetDim=2, bShareMem=True)) # write zipped full 
+
+			energy=ConvertImageToGrayScale(full)
+			energy=ResizeImage(energy, self.energy_size)
+			(keypoints,descriptors)=self.extractor.doExtract(energy)
+
+			vs=self.width  / float(energy.shape[1])
+			if keypoints:
+				camera.keypoints.clear()
+				camera.keypoints.reserve(len(keypoints))
+				for keypoint in keypoints:
+					camera.keypoints.push_back(KeyPoint(vs*keypoint.pt[0], vs*keypoint.pt[1], keypoint.size, keypoint.angle, keypoint.response, keypoint.octave, keypoint.class_id))
+				camera.descriptors=Array.fromNumPy(descriptors,TargetDim=2) 
+
+			self.saveKeyPoints(camera,keypoint_filename)
+
+			energy=cv2.cvtColor(energy, cv2.COLOR_GRAY2RGB)
+			for keypoint in keypoints:
+				cv2.drawMarker(energy, (int(keypoint.pt[0]), int(keypoint.pt[1])), (0, 255, 255), cv2.MARKER_CROSS, 5)
+			energy=cv2.flip(energy, 0)
+			energy=ConvertImageToUint8(energy)
+
+			if False:
+				quad_box=camera.quad.getBoundingBox()
+				VS = self.energy_size / max(quad_box.size()[0],quad_box.size()[1])
+				T=Matrix.scale(2,VS) * camera.homography * Matrix.scale(2,vs)
+				quad_box=Quad(T,Quad(energy.shape[1],energy.shape[0])).getBoundingBox()
+				warped=cv2.warpPerspective(energy,  MatrixToNumPy(Matrix.translate(-quad_box.p1) * T),  (int(quad_box.size()[0]),int(quad_box.size()[1])))
+				energy=ComposeImage([warped,energy],1)
+
+			self.showEnergy(camera,energy)
+
 	# convertToIdxAndExtractKeyPoints
 	def convertToIdxAndExtractKeyPoints(self):
 
@@ -410,6 +465,14 @@ class Slam2D(Slam):
 
 		if not self.extractor:
 			self.extractor=ExtractKeyPoints(self.min_num_keypoints,self.max_num_keypoints,self.anms)
+
+		ncpus=1
+
+		# with mp.Pool(ncpus) as pool:
+		# 	n = pool.map(self.convertAndExtract, ((I, (img, camera)) for I,(img,camera) in enumerate(zip(self.images,self.cameras))))
+
+		if(self.color_matching):
+			ref_img = numpy.zeros(0)
 
 		for I,(img,camera) in enumerate(zip(self.images,self.cameras)):
 			self.advanceAction(I)
@@ -423,8 +486,20 @@ class Slam2D(Slam):
 				full = self.generateImage(img)
 				Assert(isinstance(full, numpy.ndarray))
 
+				# Match Histograms
+				if(self.color_matching):
+					if(ref_img.shape[0]>0):
+						print("doing matching...")
+						MatchHistogram(full, ref_img) 
+					else:
+						ref_img = full
+
 				dataset = LoadDataset(idx_filename)
-				dataset.compressDataset(["zip"],Array.fromNumPy(full,TargetDim=2, bShareMem=True)) # write zipped full 
+				#dataset.write(full)
+				#dataset.compressDataset(["lz4"],Array.fromNumPy(full,TargetDim=2, bShareMem=True)) # write zipped full 
+
+				comp=["lz4"]#,"jpg-JPEG_QUALITYGOOD-JPEG_SUBSAMPLING_420-JPEG_OPTIMIZE" ,"jpg-JPEG_QUALITYGOOD-JPEG_SUBSAMPLING_420-JPEG_OPTIMIZE","jpg-JPEG_QUALITYGOOD-JPEG_SUBSAMPLING_420-JPEG_OPTIMIZE"]
+				dataset.compressDataset(comp,Array.fromNumPy(full,TargetDim=2, bShareMem=True)) # write zipped full 
 
 				energy=ConvertImageToGrayScale(full)
 				energy=ResizeImage(energy, self.energy_size)
@@ -455,7 +530,7 @@ class Slam2D(Slam):
 					energy=ComposeImage([warped,energy],1)
 
 				self.showEnergy(camera,energy)
-					
+				
 
 			print("Done",camera.filenames[0],I,"of",len(self.cameras))
 
@@ -721,7 +796,7 @@ class Slam2DWindow(QMainWindow):
 			self.slam.dtype.toString()))
 
 	# refreshViewer
-	def refreshViewer(self,fieldname="output=ArrayUtils.interleave(ArrayUtils.split(voronoi())[0:3])"):
+	def refreshViewer(self,fieldname="output=voronoi()"):
 		url=self.cache_dir+"/visus.midx"
 		self.viewer.open(url)
 		# make sure the RenderNode get almost RGB components
