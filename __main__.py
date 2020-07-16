@@ -62,8 +62,8 @@ def Main(args):
 
 	parser = argparse.ArgumentParser(description="slam command.")
 	parser.add_argument("--dim", type=int, help="Dimension of the dataset.", required=False,default=2)
-	parser.add_argument("--directory", type=str, help="Directory of the dataset.", required=False,default="")
-	args = parser.parse_args(args[1:])		
+	parser.add_argument("--directory", "-d", type=str, help="Directory of the dataset.", required=False,default="")
+	args = parser.parse_args(args[1:])
 	
 	print("Running slam","arguments", repr(args))
 
