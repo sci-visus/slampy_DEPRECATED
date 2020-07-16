@@ -6,17 +6,24 @@ import threading
 import time
 
 # this must appear before creating the qapp
-from PyQt5.QtWebEngineWidgets import QWebEngineView	
+#from PyQt5.QtWebEngineWidgets import QWebEngineView	
 
 from OpenVisus                        import *
-from OpenVisus.gui                    import *
 
-from PyQt5 import QtCore 
-from PyQt5.QtCore                     import QUrl
-from PyQt5.QtWidgets                  import QApplication, QHBoxLayout, QLineEdit
-from PyQt5.QtWidgets                  import QMainWindow, QPushButton, QVBoxLayout,QSplashScreen
-from PyQt5.QtWidgets                  import QWidget
-from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
+import importlib
+visus_gui_spec = importlib.util.find_spec("OpenVisus.VisusGuiPy")
+if visus_gui_spec is not None:
+                from OpenVisus.gui                    import *
+
+                from PyQt5 import QtCore 
+                from PyQt5.QtCore                     import QUrl
+                from PyQt5.QtWidgets                  import QApplication, QHBoxLayout, QLineEdit
+                from PyQt5.QtWidgets                  import QMainWindow, QPushButton, QVBoxLayout,QSplashScreen
+                from PyQt5.QtWidgets                  import QWidget
+                from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
+                
+else:
+                print("OpenVisus.VisusGuiPy not found, you are proabbly using a version of OpenVisus without GUI")
 
 from slampy.extract_keypoints import *
 from slampy.google_maps       import *
