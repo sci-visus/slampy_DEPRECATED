@@ -24,13 +24,17 @@ class ImageProviderLumenera(ImageProvider):
 
 	# generateImage
 	def generateImage(self,img):
-		multi = [numpy.array(tifffile.imread(filename)) for filename in img.filenames]
-		multi = [ConvertImageToUint8(single) for single in multi] # TODO
-		multi = self.mirrorY(multi)
-		multi = self.swapRedAndBlue(multi)
-		multi = self.undistortImage(multi)
-		multi = self.alignImage(multi)
-		return multi
+                if img.filenames[0].lower().endswith("jpg"):
+                        multi=[cv2.imread(filename,-1) for filename in img.filenames]
+                else:
+	                multi = [numpy.array(tifffile.imread(filename)) for filename in img.filenames]
+
+                multi = [ConvertImageToUint8(single) for single in multi] # TODO
+                multi = self.mirrorY(multi)
+                multi = self.swapRedAndBlue(multi)
+                multi = self.undistortImage(multi)
+                multi = self.alignImage(multi)
+                return multi
 
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////
