@@ -69,3 +69,18 @@ def SaveImage(filename,img):
 def SaveUint8Image(filename,img):
 	SaveImage(filename, ConvertImageToUint8(img))	
 
+# ////////////////////////////////////////////////////////////////////////////////
+def MatchHistogram(img, ref):
+	num_channels=img.shape[2] if len(img.shape)==3 else 1
+
+	for i in range(num_channels):
+		source = img[:,:,i].ravel()
+		reference = ref[:,:,i].ravel()
+		orig_shape = ref[:,:,i].shape
+
+		s_values, s_idx, s_counts = numpy.unique(source, return_inverse=True, return_counts=True)
+		r_values, r_counts = numpy.unique(reference, return_counts=True)
+		s_quantiles = numpy.cumsum(s_counts).astype(numpy.float64) / source.size
+		r_quantiles = numpy.cumsum(r_counts).astype(numpy.float64) / reference.size
+		interp_r_values = numpy.interp(s_quantiles, r_quantiles, r_values)
+		img[:,:,i] = interp_r_values[s_idx].reshape(orig_shape)
