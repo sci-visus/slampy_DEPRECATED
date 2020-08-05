@@ -71,17 +71,11 @@ def Main(args):
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
 	ShowSplash()
 
-	# example: python 
-	if args.dim==3:
-		# -m slampy --dim 3  --directory D:\GoogleSci\visus_dataset\male\RAW\Fullcolor\fullbody
-		win=Slam3DWindow()
-
-	else:
-		# -m slampy  --directory D:\GoogleSci\visus_slam\TaylorGrant (Generic)
-		# -m slampy  --directory D:\GoogleSci\visus_slam\Alfalfa     (Generic)
-		# -m slampy  --directory D:\GoogleSci\visus_slam\RedEdge     (micasense)
-		# -m slampy "--directory D:\GoogleSci\visus_slam\Agricultural_image_collections\AggieAir uav Micasense example\test" (micasense)		
-		win=Slam2DWindow()
+	# -m slampy  --directory D:\GoogleSci\visus_slam\TaylorGrant (Generic)
+	# -m slampy  --directory D:\GoogleSci\visus_slam\Alfalfa     (Generic)
+	# -m slampy  --directory D:\GoogleSci\visus_slam\RedEdge     (micasense)
+	# -m slampy "--directory D:\GoogleSci\visus_slam\Agricultural_image_collections\AggieAir uav Micasense example\test" (micasense)		
+	win=Slam2DWindow()
 
 	redirect_log=RedirectLog()
 	redirect_log.setCallback(win.printLog)
