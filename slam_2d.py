@@ -57,6 +57,7 @@ class Slam2D(Slam):
 	def __init__(self,width,height,dtype,calibration,cache_dir,
 								generate_bbox=False,
 								color_matching=False,
+								do_badj=True,
 								blending_exp="output=voronoi()"):
 
 		super(Slam2D,self).__init__()
@@ -83,6 +84,7 @@ class Slam2D(Slam):
 		self.generate_bbox      = generate_bbox
 		self.color_matching     = color_matching
 		self.blending_exp       = blending_exp
+		self.do_badj            = do_badj
 
 	# addCamera
 	def addCamera(self,img):
@@ -605,16 +607,20 @@ class Slam2D(Slam):
 			self.removeDisconnectedCameras()
 			self.debugMatchesGraph()
 
-		# bundle adjustment
-		tolerances=(10.0*self.ba_tolerance,1.0*self.ba_tolerance)
-		self.startAction(len(tolerances),"Refining solution...")
-		for I,tolerance in enumerate(tolerances):
-			self.advanceAction(I)
-			self.bundleAdjustment(tolerance)
-			self.removeOutlierMatches(self.max_reproj_error * self.width)
-			self.removeDisconnectedCameras()
-			self.removeCamerasWithTooMuchSkew()
-		self.endAction()
+		if do_badj:
+			# bundle adjustment
+			tolerances=(10.0*self.ba_tolerance,1.0*self.ba_tolerance)
+			self.startAction(len(tolerances),"Refining solution...")
+			for I,tolerance in enumerate(tolerances):
+				self.advanceAction(I)
+				self.bundleAdjustment(tolerance)
+				self.removeOutlierMatches(self.max_reproj_error * self.width)
+				self.removeDisconnectedCameras()
+				self.removeCamerasWithTooMuchSkew()
+			self.endAction()
+		else:
+			print("Skipping bundle adjustment...")
+			
 		self.saveMidx()
 		print("Finished")
 
