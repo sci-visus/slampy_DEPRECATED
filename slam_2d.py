@@ -24,6 +24,8 @@ if visus_gui_spec is not None:
 	from PyQt5.QtWidgets                  import QWidget
 	from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
 
+	from slampy.gui_utils         import *
+
 else:
 	print("OpenVisus.VisusGuiPy not found, you are proabbly using a version of OpenVisus without GUI")
 
@@ -31,7 +33,6 @@ from slampy.extract_keypoints import *
 from slampy.google_maps       import *
 from slampy.gps_utils         import *
 from slampy.find_matches      import *
-from slampy.gui_utils         import *
 from slampy.image_provider    import *
 from slampy.image_utils       import *
 
@@ -620,7 +621,7 @@ class Slam2D(Slam):
 			self.endAction()
 		else:
 			print("Skipping bundle adjustment...")
-			
+
 		self.saveMidx()
 		print("Finished")
 
