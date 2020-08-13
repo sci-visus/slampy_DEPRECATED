@@ -200,7 +200,7 @@ class ImageProviderSequoia(ImageProvider):
 # /////////////////////////////////////////////////////////////////////////////////////////////////////
 def CreateInstance(metadata):
 	exit_make =metadata["EXIF:Make"].lower()  if "EXIF:Make"  in metadata else ""
-	exif_model=metadata["EXIF:Model"].lower() if "EXIF:Model" in metadata else ""
+	exif_model=str(metadata["EXIF:Model"]).lower() if "EXIF:Model" in metadata else ""
 	if "sequoia" in exif_model or "sequoia" in exif_model:
 		return ImageProviderSequoia()
 	else:
