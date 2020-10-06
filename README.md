@@ -33,3 +33,11 @@ Finally run slam:
 ```
 python -m slampy
 ```
+
+## Notes for developers
+
+```
+python -m pip install numpy matplotlib pymap3d pytz pyzbar scikit-image scipy pysolar json-tricks cmapy tifffile pyexiftool opencv-python opencv-contrib-python
+PYTHONPATH=.\build\RelWithDebInfo;.\Libs
+python -m slampy [D:\GoogleSci\visus_slam\TaylorGrant]
+```

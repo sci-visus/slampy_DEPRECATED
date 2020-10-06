@@ -1,7 +1,6 @@
 import os, sys, argparse
 
 from slampy.slam_2d import Slam2DWindow
-from slampy.slam_3d import Slam3DWindow
 from slampy.gui_utils import *
 import datetime
 
@@ -61,7 +60,6 @@ class RedirectLog(QtCore.QObject):
 def Main(args):
 
 	parser = argparse.ArgumentParser(description="slam command.")
-	parser.add_argument("--dim", type=int, help="Dimension of the dataset.", required=False,default=2)
 	parser.add_argument("--directory", "-d", type=str, help="Directory of the dataset.", required=False,default="")
 	args = parser.parse_args(args[1:])
 	

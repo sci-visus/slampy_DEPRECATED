@@ -54,10 +54,7 @@ def ComposeImage(v, axis):
 class Slam2D(Slam):
 
 	# constructor
-	def __init__(self,width,height,dtype,calibration,cache_dir,
-								generate_bbox=False,
-								color_matching=False,
-								blending_exp="output=voronoi()"):
+	def __init__(self,width,height,dtype,calibration,cache_dir, generate_bbox=False, color_matching=False, blending_exp="output=voronoi()"):
 
 		super(Slam2D,self).__init__()
 
@@ -416,6 +413,7 @@ class Slam2D(Slam):
 		self.debugSolution()
 		self.debugMatchesGraph()
 
+	# convertAndExtract
 	def convertAndExtract(args):
 		I, (img, camera) = args
 
@@ -744,7 +742,8 @@ class Slam2DWindow(QMainWindow):
 	def generateImage(self,img):
 		t1=Time.now()
 		print("Generating image",img.filenames[0])	
-		ret = InterleaveChannels(self.provider.generateImage(img))
+		generated=self.provider.generateImage(img)
+		ret = InterleaveChannels(generated)
 		print("done",img.id,"range",ComputeImageRange(ret),"shape",ret.shape, "dtype",ret.dtype,"in",t1.elapsedMsec()/1000,"msec")
 		return ret
 
@@ -822,7 +821,6 @@ img=Array.toNumPy(input,bShareMem=True)
 img=cv2.Laplacian(img,cv2.CV_64F)
 output=Array.fromNumPy(img,TargetDim=pdim)
 """);
-
 
 	# refreshGoogleMaps
 	def refreshGoogleMaps(self):

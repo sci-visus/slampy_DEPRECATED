@@ -53,7 +53,6 @@ def ResizeImage(src,max_size):
 	if vs>=1.0: return src
 	return cv2.resize(src, (int(vs*W),int(vs*H)), interpolation=cv2.INTER_CUBIC)
 
-
 # ////////////////////////////////////////////////////////////////////////////////
 def ConvertImageToUint8(img):
 	if img.dtype==numpy.uint8: 
@@ -63,7 +62,8 @@ def ConvertImageToUint8(img):
 
 # ////////////////////////////////////////////////////////////////////////////////
 def SaveImage(filename,img):
-	Array.fromNumPy(image, TargetDim=2, bShareMem=True).save(url)
+	array=Array.fromNumPy(img, TargetDim=2, bShareMem=True)
+	return ArrayUtils.saveImage(filename,array)
 
 # ////////////////////////////////////////////////////////////////////////////////
 def SaveUint8Image(filename,img):
