@@ -54,7 +54,7 @@ def ComposeImage(v, axis):
 class Slam2D(Slam):
 
 	# constructor
-	def __init__(self,width,height,dtype,calibration,cache_dir, generate_bbox=False, color_matching=False, blending_exp="output=voronoi()"):
+	def __init__(self,width,height,dtype,calibration,cache_dir, enable_svg=True, enable_color_matching=False):
 
 		super(Slam2D,self).__init__()
 
@@ -77,9 +77,8 @@ class Slam2D(Slam):
 		self.images             = []
 		self.extractor          = None
 
-		self.generate_bbox      = generate_bbox
-		self.color_matching     = color_matching
-		self.blending_exp       = blending_exp
+		self.enable_svg              = enable_svg
+		self.enable_color_matching   = enable_color_matching
 
 	# addCamera
 	def addCamera(self,img):
@@ -251,13 +250,13 @@ class Slam2D(Slam):
 	# saveMidx
 	def saveMidx(self):
 
-		url=self.cache_dir+"/visus.midx"
-
 		lat0,lon0=self.images[0].lat,self.images[0].lon
 
 		logic_box = self.getQuadsBox()
 
-		# instead of working in range -180,+180 -90,+90 (worldwise ref frame) I normalize the range in 0,1 0,1
+		# instead of working in range -180,+180 -90,+90 (worldwise ref frame) I normalize the range in [0,1]*[0,1]
+		# physic box is in the range [0,1]*[0,1]
+		# logic_box is in pixel coordinates
 		physic_box=BoxNd.invalid()
 		for I, camera in enumerate(self.cameras):
 			quad=self.computeWorldQuad(camera)
@@ -279,22 +278,29 @@ class Slam2D(Slam):
 
 		lines=[]
 
+		# this is the midx
 		lines.append("<dataset typename='IdxMultipleDataset' logic_box='%s %s %s %s' physic_box='%s %s %s %s'>" % (
 			cstring(int(logic_box.p1[0])),cstring(int(logic_box.p2[0])),cstring(int(logic_box.p1[1])),cstring(int(logic_box.p2[1])),
 			cstring10(physic_box.p1[0]),cstring10(physic_box.p2[0]),cstring10(physic_box.p1[1]),cstring10(physic_box.p2[1])))
 		lines.append("")
+
+		# dump some information about the slam
 		lines.append("<slam width='%s' height='%s' dtype='%s' calibration='%s %s %s' />" % (
 			cstring(self.width),cstring(self.height),self.dtype.toString(),
 			cstring(self.calibration.f),cstring(self.calibration.cx),cstring(self.calibration.cy)))
 		lines.append("")
-		lines.append("<field name='blend'><code>"+self.blending_exp+"</code></field>")
+
+		# this is the default field
+		lines.append("<field name='blend'><code>output=voronoi()</code></field>")
 		lines.append("")
+
+		# how to go from logic_box (i.e. pixel) -> physic box ([0,1]*[0,1])
 		lines.append("<translate x='%s' y='%s'>" % (cstring10(physic_box.p1[0]),cstring10(physic_box.p1[1])))
 		lines.append("<scale     x='%s' y='%s'>" % (cstring10(physic_box.size()[0]/logic_box.size()[0]),cstring10(physic_box.size()[1]/logic_box.size()[1])))
 		lines.append("<translate x='%s' y='%s'>" % (cstring10(-logic_box.p1[0]),cstring10(-logic_box.p1[1])))
 		lines.append("")
 
-		if self.generate_bbox:
+		if self.enable_svg:
 			W=int(1024)
 			H=int(W*(logic_box.size()[1]/float(logic_box.size()[0])))
 
@@ -306,15 +312,15 @@ class Slam2D(Slam):
 				cstring(int(logic_box.p2[0])),
 				cstring(int(logic_box.p2[1]))))
 
-			lines.append("\t<g stroke='#000000' stroke-width='1' fill='#ffff00' fill-opacity='0.3'>")
+			lines.append("<g stroke='#000000' stroke-width='1' fill='#ffff00' fill-opacity='0.3'>")
 			for I, camera in enumerate(self.cameras):
-				lines.append("\t\t<poi point='%s,%s' />" % (cstring(logic_centers[I][0]),cstring(logic_centers[I][1])))
-			lines.append("\t</g>")
+				lines.append("\t<poi point='%s,%s' />" % (cstring(logic_centers[I][0]),cstring(logic_centers[I][1])))
+			lines.append("</g>")
 
-			lines.append("\t<g fill-opacity='0.0' stroke-opacity='0.5' stroke-width='2'>")
+			lines.append("<g fill-opacity='0.0' stroke-opacity='0.5' stroke-width='2'>")
 			for I, camera in enumerate(self.cameras):
-				lines.append("\t\t<polygon points='%s' stroke='%s' />" % (camera.quad.toString(","," "),camera.color.toString()[0:7]))
-			lines.append("\t</g>")
+				lines.append("\t<polygon points='%s' stroke='%s' />" % (camera.quad.toString(","," "),camera.color.toString()[0:7]))
+			lines.append("</g>")
 
 			lines.append("</svg>")
 			lines.append("")
@@ -322,7 +328,7 @@ class Slam2D(Slam):
 		for I, camera in enumerate(self.cameras):
 			p=camera.getWorldCenter()
 			lat,lon,alt=*GPSUtils.localCartesianToGps(p.x, p.y, lat0, lon0),p.z
-			lines.append("\t<dataset url='%s' color='%s' quad='%s' filenames='%s' q='%s' t='%s' lat='%s' lon='%s' alt='%s' />" %(
+			lines.append("<dataset url='%s' color='%s' quad='%s' filenames='%s' q='%s' t='%s' lat='%s' lon='%s' alt='%s' />" %(
 				camera.idx_filename,
 				camera.color.toString(),
 				camera.quad.toString(),
@@ -338,7 +344,16 @@ class Slam2D(Slam):
 		lines.append("")
 		lines.append("</dataset>")
 
-		SaveTextDocument(url,"\n".join(lines) )
+		SaveTextDocument(self.cache_dir+"/visus.midx","\n".join(lines))
+
+		SaveTextDocument(self.cache_dir+"/google.midx",
+"""
+<dataset name='slam' typename='IdxMultipleDataset'>
+	<field name='voronoi'><code>output=voronoi()</code></field>
+	<dataset typename='GoogleMapsDataset' tiles='http://mt1.google.com/vt/lyrs=s' physic_box='0.0 1.0 0.0 1.0' />
+	<dataset name='visus'   url='./visus.midx' />
+</dataset>
+""")
 
 	# debugMatchesGraph
 	def debugMatchesGraph(self):
@@ -473,13 +488,8 @@ class Slam2D(Slam):
 		if not self.extractor:
 			self.extractor=ExtractKeyPoints(self.min_num_keypoints,self.max_num_keypoints,self.anms)
 
-		ncpus=1
-
-		# with mp.Pool(ncpus) as pool:
-		# 	n = pool.map(self.convertAndExtract, ((I, (img, camera)) for I,(img,camera) in enumerate(zip(self.images,self.cameras))))
-
-		if(self.color_matching):
-			ref_img = numpy.zeros(0)
+		if self.enable_color_matching:
+			color_matching_ref = None
 
 		for I,(img,camera) in enumerate(zip(self.images,self.cameras)):
 			self.advanceAction(I)
@@ -494,12 +504,12 @@ class Slam2D(Slam):
 				Assert(isinstance(full, numpy.ndarray))
 
 				# Match Histograms
-				if(self.color_matching):
-					if(ref_img.shape[0]>0):
-						print("doing matching...")
-						MatchHistogram(full, ref_img) 
+				if self.enable_color_matching:
+					if color_matching_ref:
+						print("doing color matching...")
+						MatchHistogram(full, color_matching_ref) 
 					else:
-						ref_img = full
+						color_matching_ref = full
 
 				dataset = LoadDataset(idx_filename)
 				#dataset.write(full)
@@ -538,7 +548,6 @@ class Slam2D(Slam):
 
 				self.showEnergy(camera,energy)
 				
-
 			print("Done",camera.filenames[0],I,"of",len(self.cameras))
 
 		print("done in",t1.elapsedMsec(),"msec")

@@ -1,4 +1,4 @@
-import os, sys, argparse
+import os, sys, argparse, datetime
 
 from slampy.slam_2d import Slam2D
 
@@ -10,7 +10,6 @@ from slampy.find_matches      import *
 from slampy.gui_utils         import *
 from slampy.image_provider    import *
 from slampy.image_utils       import *
-import datetime
 
 # //////////////////////////////////////////////////////////////////////////////////////////////
 class Slam2DBatch:
