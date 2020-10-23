@@ -640,6 +640,22 @@ class ImageProvider:
 
 		return multi
 
+# ////////////////////////////////////////////////////////////////////////////////
+def FindImages(template="./**/*.*",recursive=True,image_extensions=('.jpg','.png','.tif','.bmp')):
+	
+	ret=[]
+	for filename in glob.glob(template,recursive=recursive):
+		
+		# look for extension, must be an image
+		if image_extensions:
+			ext=	os.path.splitext(filename)[1].lower()
+			if not ext in image_extensions:
+				continue
+			
+		ret.append(filename)
+		
+	return ret
+
 # ////////////////////////////////////////////////////////////////////////////////////////
 def CreateProvider(cache_dir,progress_bar=None):
 	
@@ -654,7 +670,6 @@ def CreateProvider(cache_dir,progress_bar=None):
 	reader=MetadataReader()
 	
 	provider_names=[os.path.splitext(os.path.basename(it))[0] for it in glob.glob(os.path.dirname(__file__) + "/image_provider_*.py")]
-	provider_names.remove("image_provider_3d")
 	provider_names.remove("image_provider_generic") # must be the last one
 	provider_names.append("image_provider_generic")
 	print("Provider names",provider_names)

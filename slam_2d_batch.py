@@ -1,4 +1,4 @@
-import os, sys, argparse
+import os, sys, argparse, datetime
 
 from slampy.slam_2d import Slam2D
 
@@ -14,9 +14,9 @@ from slampy.gps_utils         import *
 from slampy.find_matches      import *
 from slampy.image_provider    import *
 from slampy.image_utils       import *
-import datetime
 
-class Slam2Dbatch():
+# //////////////////////////////////////////////////////////////////////////////////////////////
+class Slam2DBatch:
 
 	# constructor
 	def __init__(self, color_matching=False):
@@ -65,6 +65,7 @@ class Slam2Dbatch():
 
 		self.slam.initialSetup()
 
+	# run
 	def run(self):
 		self.slam.run()
 
@@ -80,7 +81,7 @@ def Main(args):
 	# since I'm writing data serially I can disable locks
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
 
-	batch = Slam2Dbatch(color_matching=True)
+	batch = Slam2DBatch(color_matching=True)
 	batch.setCurrentDir(args.directory)
 	batch.run()
 	
