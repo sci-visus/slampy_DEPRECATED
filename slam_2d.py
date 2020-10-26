@@ -814,10 +814,29 @@ class Slam2DWindow(QMainWindow):
 
 	# refreshViewer
 	def refreshViewer(self,fieldname="output=voronoi()"):
-		url=self.cache_dir+"/visus.midx"
+		url=self.cache_dir+"/google.midx"
 		self.viewer.open(url)
 		# make sure the RenderNode get almost RGB components
-		self.viewer.setFieldName(fieldname)		
+		self.viewer.setFieldName(fieldname)	
+
+		if True:
+
+			# don't show logs
+			pref=ViewerPreferences()
+			pref.bShowToolbar=False
+			pref.bShowTreeView=False
+			pref.bShowDataflow=False
+			pref.bShowLogs=False
+			self.viewer.setPreferences(pref)
+
+			# don't show annotations
+			db=self.viewer.getDataset()
+			db.setEnableAnnotations(False)
+			
+			# focus on slam dataset (not google world)
+			box=db.getChild("visus").getDatasetBounds().toAxisAlignedBox()
+			self.viewer.getGLCamera().guessPosition(box)
+
 
 		# for Amy: example about processing
 		if False:
