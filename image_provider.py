@@ -639,11 +639,13 @@ class ImageProvider:
 
 		return multi
 
-# ////////////////////////////////////////////////////////////////////////////////
-def FindImages(template="./**/*.*",recursive=True,image_extensions=('.jpg','.png','.tif','.bmp')):
+
+# ////////////////////////////////////////////////////////////////////////////////////////
+def CreateProvider(image_dir, cache_dir,progress_bar=None, image_extensions=('.jpg','.png','.tif','.bmp')):
 	
-	ret=[]
-	for filename in glob.glob(template,recursive=recursive):
+	all_images=[]
+
+	for filename in glob.glob(os.path.join(image_dir,"**/*.*"),recursive=True):
 		
 		# look for extension, must be an image
 		if image_extensions:
@@ -651,23 +653,23 @@ def FindImages(template="./**/*.*",recursive=True,image_extensions=('.jpg','.png
 			if not ext in image_extensions:
 				continue
 			
-		ret.append(filename)
-		
-	return ret
+		# skip temporary files
+		if "~" in filename:
+			continue
 
-# ////////////////////////////////////////////////////////////////////////////////////////
-def CreateProvider(cache_dir,progress_bar=None):
-	
-	image_dir=os.getcwd()
-	
-	all_images=[it for it in FindImages() if not "~" in it and not "VisusSlamFiles" in it]
+		# default is cache_dir is indie image_dir
+		if "VisusSlamFiles" in filename:
+			continue
+
+		print("Found image",len(all_images),filename)
+		all_images.append(filename)
+
 	if not all_images:
 		return None
 
-	print("Found all images\n","\n".join([str((I,filename)) for I,filename in enumerate(all_images)]))
-
 	reader=MetadataReader()
 	
+	# looking for all providers at run time 
 	provider_names=[os.path.splitext(os.path.basename(it))[0] for it in glob.glob(os.path.dirname(__file__) + "/image_provider_*.py")]
 	provider_names.remove("image_provider_generic") # must be the last one
 	provider_names.append("image_provider_generic")
@@ -701,6 +703,7 @@ def CreateProvider(cache_dir,progress_bar=None):
 	if not provider_instance:
 		raise Exception("cannot find a good provider")
 
+	provider_instance.image_dir=image_dir
 	provider_instance.cache_dir=cache_dir
 	provider_instance.progress_bar=progress_bar	
 	provider_instance.setImages(all_images)

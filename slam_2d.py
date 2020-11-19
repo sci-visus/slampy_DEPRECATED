@@ -642,7 +642,7 @@ class Slam2DWindow(QMainWindow):
 	# constructor
 	def __init__(self):
 		super(Slam2DWindow, self).__init__()
-		self.image_directory=""
+		self.image_dir=""
 		self.cache_dir=""
 		self.createGui()
 
@@ -740,12 +740,13 @@ class Slam2DWindow(QMainWindow):
 		print(msg)
 		QMessageBox.information(self, 'Information', msg)
 
-	# chooseDirectory
-	def chooseDirectory(self):
+	# chooseImageDirectory
+	def chooseImageDirectory(self,cache_dir=None):
 		print("Showing choose directory dialog")
 		value = QFileDialog.getExistingDirectory(self, "Choose directory...","",QFileDialog.ShowDirsOnly) 
-		if not value: return
-		self.setCurrentDir(value)	
+		if not value: 
+			return
+		self.setImageDirectory(value,cache_dir)	
 
 	# generateImage
 	def generateImage(self,img):
@@ -765,22 +766,24 @@ class Slam2DWindow(QMainWindow):
 		self.preview.showPreview(energy,"Extracting keypoints image(%d/%d) #keypoints(%d)" % (camera.id,len(self.provider.images),camera.keypoints.size()))
 		self.processEvents()
 
-	# setCurrentDir
-	def setCurrentDir(self, image_dir):
+	# setImageDirectory
+	def setImageDirectory(self, image_dir, cache_dir=None):
 		
+		if not cache_dir:
+			cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
+
 		# avoid recursions
-		if self.image_directory==image_dir:
+		if self.image_dir==image_dir and self.cache_dir==cache_dir:
 			return
-			
-		self.image_directory=image_dir
-		
-		self.log.clear()
+
 		Assert(os.path.isdir(image_dir))
-		os.chdir(image_dir)
-		self.cache_dir=os.path.abspath("./VisusSlamFiles")
-		self.provider=CreateProvider(self.cache_dir,self.progress_bar)
+		self.log.clear()
 		
+		self.cache_dir=cache_dir
+		self.image_dir=image_dir
 		os.makedirs(self.cache_dir,exist_ok=True)
+		self.provider=CreateProvider(self.image_dir, self.cache_dir,self.progress_bar)
+		
 		TryRemoveFiles(self.cache_dir+'/~*')
 
 		full=self.generateImage(self.provider.images[0])
@@ -868,7 +871,7 @@ output=Array.fromNumPy(img,TargetDim=pdim)
 
 		content=maps.generateHtml()
 		
-		filename=os.path.join(os.getcwd(),self.cache_dir+"/slam.html")
+		filename=os.path.join(self.cache_dir,"slam.html")
 		SaveTextDocument(filename,content)
 		self.google_maps.load(QUrl.fromLocalFile(filename))	
 
