@@ -97,10 +97,12 @@ class ImageProvider:
 	# loadMetadata
 	def loadMetadata(self,ncomponent=0):
 
-		cached_filename=self.cache_dir+"/metadata"
+		import json
+
+		cached_filename=self.cache_dir+"/metadata.json"
 
 		try:
-			cached_metadata=pickle.load(open(cached_filename,"rb"))	
+			cached_metadata=json.load(open(cached_filename,"r"))	
 		except :
 			cached_metadata={}
 	
@@ -110,8 +112,14 @@ class ImageProvider:
 		self.startAction(N,'Reading Metadata, please wait')
 
 		for I,img in enumerate(self.images):
-			filename=img.filenames[ncomponent]
-			img.metadata=cached_metadata[filename] if filename in cached_metadata else reader.readMetadata(filename)
+			filename=img.filenames[ncomponent] # take the first image...
+
+			key=os.path.relpath(filename,self.image_dir)
+			if key in cached_metadata:
+				img.metadata=cached_metadata[key]
+			else:
+				img.metadata=reader.readMetadata(filename)
+
 			self.advanceAction(I)
 			time.sleep(0.00001)
 
@@ -124,9 +132,10 @@ class ImageProvider:
 		cached_metadata={}
 		for img in self.images:
 			filename=img.filenames[ncomponent]
-			cached_metadata[filename]=img.metadata
+			key=os.path.relpath(filename,self.image_dir)
+			cached_metadata[key]=img.metadata
 		os.makedirs(os.path.dirname(cached_filename),exist_ok=True)
-		pickle.dump(cached_metadata, open(cached_filename,"wb"))	
+		json.dump(cached_metadata, open(cached_filename,"w", encoding="utf-8", newline='\r\n'),indent=4, sort_keys=True, ensure_ascii=False)	
 
 	# findMetadata
 	def findMetadata(self,img, names, prefixes=["Telemetry:", "SensorConfig:", "Composite:", "EXIF:", "XMP:"]):
@@ -667,6 +676,7 @@ def CreateProvider(image_dir, cache_dir,progress_bar=None, image_extensions=('.j
 	if not all_images:
 		return None
 
+	# I need to guess what model is the drone (I use the metadata for that. see all CreateImageProviderInstance methods)
 	reader=MetadataReader()
 	
 	# looking for all providers at run time 
@@ -690,7 +700,7 @@ def CreateProvider(image_dir, cache_dir,progress_bar=None, image_extensions=('.j
 
 		for module in provider_modules:
 			print("Trying",module.__name__)
-			provider_instance=getattr(module, "CreateInstance")(metadata)
+			provider_instance=getattr(module, "CreateImageProviderInstance")(metadata)
 			if provider_instance: 
 				print("Detected",module.__name__)
 				break

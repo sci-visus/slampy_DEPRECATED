@@ -34,7 +34,7 @@ class ImageProviderLumenera(ImageProvider):
 
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////
-def CreateInstance(metadata):
+def CreateImageProviderInstance(metadata):
 	exif_make =metadata["EXIF:Make"].lower()  if "EXIF:Make"  in metadata else ""
 	exif_model=metadata["EXIF:Model"].lower() if "EXIF:Model" in metadata else ""
 	if "lumenera" in exif_model or "lumenera" in exif_make:

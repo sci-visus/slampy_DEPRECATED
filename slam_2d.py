@@ -769,6 +769,7 @@ class Slam2DWindow(QMainWindow):
 	# setImageDirectory
 	def setImageDirectory(self, image_dir, cache_dir=None):
 		
+		# by default cached files go inside
 		if not cache_dir:
 			cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
 

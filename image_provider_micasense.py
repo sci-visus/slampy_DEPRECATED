@@ -97,7 +97,7 @@ class ImageProviderRedEdge(ImageProvider):
 		return multi
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////
-def CreateInstance(metadata):
+def CreateImageProviderInstance(metadata):
 
 	acc=[]
 	for key,value in metadata.items():
