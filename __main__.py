@@ -60,8 +60,14 @@ class RedirectLog(QtCore.QObject):
 def Main(args):
 
 	parser = argparse.ArgumentParser(description="slam command.")
-	parser.add_argument("--directory", "-d", type=str, help="Directory of the source images.", required=False,default="")
-	parser.add_argument("--cache-dir", "-c", type=str, help="Directory for generated files." , required=False,default="")
+	parser.add_argument("--directory",   type=str, help="Directory of the source images", required=False,default="")
+	parser.add_argument("--cache-dir",   type=str, help="Directory for generated files" , required=False,default="")
+
+	# the following are used inside Image provider
+	parser.add_argument("--plane",       type=str, help="Projecting plane"                    , required=False,default="")
+	parser.add_argument("--calibration", type=str, help="Camera calibration"                  , required=False,default="")
+	parser.add_argument("--telemetry"  , type=str, help="Telemetry file for lat,lon,alt,yaw"  , required=False,default="")
+
 	args = parser.parse_args(args[1:])
 	
 	print("Running slam","arguments", repr(args))
@@ -74,7 +80,8 @@ def Main(args):
 	# -m slampy --directory D:\GoogleSci\visus_slam\Alfalfa     (Generic)
 	# -m slampy --directory D:\GoogleSci\visus_slam\RedEdge     (micasense)
 	# -m slampy --directory "D:\GoogleSci\visus_slam\Agricultural_image_collections\AggieAir uav Micasense example\test" (micasense)		
-	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall
+	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall	
+	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall --plane 1071.61 --calibration "2222.2194 2000.0 1500.0" --telemetry D:/~slam/TaylorGrantSmall/metadata.json
 	win=Slam2DWindow()
 
 	redirect_log=RedirectLog()

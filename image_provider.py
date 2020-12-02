@@ -16,6 +16,29 @@ from slampy.gps_utils                import *
 from slampy.metadata_reader          import *
 from slampy.image_utils              import *
 
+
+def GetCommandLineArg(name):
+	if name in sys.argv:
+		index=sys.argv.index(name)
+		return sys.argv[index+1]
+	else:
+		return None
+
+
+def FindMetadata(metadata, names, prefixes=["Telemetry:", "SensorConfig:", "Composite:", "EXIF:", "XMP:"]):
+	for name in names:
+		for prefix in prefixes:
+			full_key=prefix+name
+			if full_key in metadata:
+				return full_key
+	return None
+
+LAT_NAMES=["GPSLatitude","Latitude","lat"]
+LON_NAMES=["GPSLongitude","Longitude","lon"]
+ALT_NAMES=["GPSAltitude","Altitude","alt"]
+YAW_NAMES=["Yaw","GimbalYaw","GimbalYawDegree","yaw","yaw(gps)"]
+				
+
 # ///////////////////////////////////////////////////////////////////
 class PythonSlamImage:
 
@@ -53,7 +76,7 @@ class ImageProvider:
 		# +math.pi/2 means east
 		# -math.pi/2 means west
 		# math.pi==-math.pi means south
-		self.camera_yaw=0.0
+		self.yaw_offset=0.0
 
 	# startAction
 	def startAction(self,N,message):
@@ -97,8 +120,6 @@ class ImageProvider:
 	# loadMetadata
 	def loadMetadata(self,ncomponent=0):
 
-		import json
-
 		cached_filename=self.cache_dir+"/metadata.json"
 
 		try:
@@ -132,19 +153,11 @@ class ImageProvider:
 		cached_metadata={}
 		for img in self.images:
 			filename=img.filenames[ncomponent]
-			key=os.path.relpath(filename,self.image_dir)
+			key=os.path.basename(filename)
 			cached_metadata[key]=img.metadata
 		os.makedirs(os.path.dirname(cached_filename),exist_ok=True)
 		json.dump(cached_metadata, open(cached_filename,"w", encoding="utf-8", newline='\r\n'),indent=4, sort_keys=True, ensure_ascii=False)	
 
-	# findMetadata
-	def findMetadata(self,img, names, prefixes=["Telemetry:", "SensorConfig:", "Composite:", "EXIF:", "XMP:"]):
-		for name in names:
-			for prefix in prefixes:
-				full_key=prefix+name
-				if full_key in img.metadata:
-					return full_key
-		return None
 
 	# loadSensorCfg
 	def loadSensorCfg(self,sensor_filename="sensor.cfg"):
@@ -163,44 +176,84 @@ class ImageProvider:
 				img.metadata["SensorCfg:"+key]=value	
 
 	# loadTelemetry
-	def loadTelemetry(self,ncomponent=0,tememetry_filename="telemetry.dat"):
+	"""
+	-------- first line to skip --------
+	Image	lat	lon	alt	yaw
+	DSC_6401.JPG	30.547119	-96.435745	114.33	2.859
+	DSC_6402.JPG	30.547079	-96.435699	115.00	2.835
+	...
 
-		content=LoadTextDocument(tememetry_filename)
-		if not content:
-			print("no telemetry")
-			return False
+	OR json:
 
-		print("Using",tememetry_filename)
-		lines=[line.strip() for line in content.splitlines() if len(line.strip())]
+	{
+		 "DSC_6401.JPG": {
+        "Composite:GPSAltitude": 30.547119,
+        "Composite:GPSLatitude": -96.435745,
+        "Composite:GPSLongitude": -114.33,
+        "Composite:GimbalYaw": 2.859
+		},
 
-		records={}
-		for L,line in enumerate(lines[1:]):
-			values=[it.strip() for it in line.split("\t") if len(it.strip())]
+		 "DSC_6402.JPG": {
+        "Composite:GPSAltitude": 30.547079,
+        "Composite:GPSLatitude": -96.435699,
+        "Composite:GPSLongitude": 115.00,
+        "Composite:GimbalYaw": 2.835
+		}
+	"""
+	def loadTelemetry(self,tememetry_filename,ncomponent=0, skip_lines=1):
 
-			if L==0:
-				names=values
-				print("names",names)
-				continue
+		print("Loading telemetry from",tememetry_filename)
+		ext=os.path.splitext(tememetry_filename)[1]
+		if ext==".json":
+			metadata=json.load(open(tememetry_filename,"r"))
 
-			key=values[0]
-			record={}
-			for name,value in zip(names,values): 
-				record[name]=value
-			records[key]=record
-			print("Telemetry new record","key",key,record)
-				
+		else:
+			content=LoadTextDocument(tememetry_filename)
+			if not content:
+				print("no telemetry")
+				return False
+
+			print("Using",tememetry_filename)
+			lines=[line.strip() for line in content.splitlines() if len(line.strip())]
+
+			# skip lines
+			if skip_lines:
+				lines=lines[skip_lines:]
+
+			metadata={}
+			for L,line in enumerate(lines):
+				values=[it.strip() for it in line.split("\t") if len(it.strip())]
+
+				if L==0:
+					names=values
+					print("names",names)
+				else:
+					key=values[0]
+					record={}
+					for name,value in zip(names,values): 
+						record[name]=value
+					metadata[key]=record
+
+		first=metadata[next(iter(metadata))]
+		LAT=FindMetadata(first,LAT_NAMES)
+		LON=FindMetadata(first,LON_NAMES)
+		ALT=FindMetadata(first,ALT_NAMES)
+		YAW=FindMetadata(first,YAW_NAMES)
+
+		# using basename as a key to find in telemetry file
+		# '/a/b/cccc.jpg -> cccc.jpg
 		for img in self.images:
-			key=os.path.basename(img.filenames[ncomponent])
-			if key in records:
-				lat=ParseDouble(records[key]["lat"])
-				lon=ParseDouble(records[key]["lon"])
-				alt=ParseDouble(records[key]["alt"])
-				yaw=ParseDouble(records[key]["yaw(gps)"])
-				img.metadata["Telemetry:GPSLatitude" ]=lat
-				img.metadata["Telemetry:GPSLongitude"]=lon
-				img.metadata["Telemetry:GPSAltitude" ]=alt	
-				img.metadata["Telemetry:Yaw"         ]=yaw	
-
+			key=os.path.basename(img.filenames[ncomponent]) 
+			if key in metadata:
+				lat=metadata[key][LAT]
+				lon=metadata[key][LON]
+				alt=metadata[key][ALT]
+				yaw=metadata[key][YAW]
+				print("Telemetry record","key",key,"lat",lat,"lon",lon,"alt",alt,"yaw",yaw)
+				img.metadata["Telemetry:" + LAT_NAMES[0]]=lat
+				img.metadata["Telemetry:" + LON_NAMES[0]]=lon
+				img.metadata["Telemetry:" + ALT_NAMES[0]]=alt
+				img.metadata["Telemetry:" + YAW_NAMES[0]]=yaw
 
 	# findPanels
 	def findPanels(self):
@@ -212,14 +265,14 @@ class ImageProvider:
 		for key,value in img.metadata.items():
 			print("\t",key,"=",value)
 
-	# guessGPS
-	def guessGPS(self):
+	# loadLatLonAltFromMetadata
+	def loadLatLonAltFromMetadata(self):
 
 		print("Extracting GPS")
 
-		LAT=self.findMetadata(self.images[0], ["GPSLatitude" ,"Latitude" ]) 
-		LON=self.findMetadata(self.images[0], ["GPSLongitude","Longitude"]) 
-		ALT=self.findMetadata(self.images[0], ["GPSAltitude" ,"Altitude" ])
+		LAT=FindMetadata(self.images[0].metadata, LAT_NAMES) 
+		LON=FindMetadata(self.images[0].metadata, LON_NAMES) 
+		ALT=FindMetadata(self.images[0].metadata, ALT_NAMES)
 
 		if LAT is None: raise Exception("missing latitude  from metadata")
 		if LON is None: raise Exception("missing longitude from metadata")
@@ -235,7 +288,10 @@ class ImageProvider:
 			except:
 				print("WARNING","image",img.filenames[0],"does not have",LAT,LON,ALT)
 
-		# interpolating (could happen for some images)
+		return True
+
+	# interpolating (could happen for some images)
+	def interpolateGPS(self):
 		N=len(self.images)
 		for I,img in enumerate(self.images):
 
@@ -257,18 +313,17 @@ class ImageProvider:
 			else:
 				raise Exception("cannot interpolate GPS for",img.filenames[0])
 
-		return True
 
-	# guessYaw
-	def guessYaw(self):
+	# loadYawFromMetadata
+	def loadYawFromMetadata(self):
 
 		img=self.images[0]
-		YAW=self.findMetadata(img,["Yaw","GimbalYaw","GimbalYawDegree"])
+		YAW=FindMetadata(img.metadata,YAW_NAMES)
 
 		if YAW:
 			print("using metadata yaw",YAW)
 		else:
-			print("Guessing yaw from flight direction")
+			print("Guessing yaw from flight direction (better not do that!)")
 
 		for I,img in enumerate(self.images):
 
@@ -297,7 +352,7 @@ class ImageProvider:
 				img.yaw=sum(yaws) / len(yaws) 
 				print(img.filenames[0], "yaw from flight direction",img.yaw)
 
-		# forcing radians (i don;t know if in metadata are degrees or radiant)
+		# i don't know in advance if in metadata are degrees or radiant: forcing radians
 		if YAW:
 
 			m=min([img.yaw for img in self.images])
@@ -319,12 +374,7 @@ class ImageProvider:
 			else:
 				print("Yaws are in range",m, M, "and I'm guessing them to be in radians")
 
-		print("Normalizing and adding camera_yaws",self.camera_yaw)
-		for img in self.images:
-			img.yaw=self.camera_yaw+img.yaw
-			while img.yaw > +math.pi: img.yaw-=2*math.pi
-			while img.yaw < -math.pi: img.yaw+=2*math.pi
-			print(img.filenames[0], "yaw_radians",img.yaw, "yaw_degrees",math.degrees(img.yaw))
+
 
 	# setPlane
 	def setPlane(self,value):
@@ -348,20 +398,20 @@ class ImageProvider:
 
 		# could be I have some images on the floor (i.e. panels)
 		if len(self.panels):
-			ALT=self.findMetadata(img,["GPSAltitude"])
+			ALT=FindMetadata(img.metadata,["GPSAltitude"])
 			if ALT:
 				value=min([ParseDouble(image.metadata[ALT]) for image in self.panels])
 				print("Guessing plane",value,"from panels")
-				return self.setPlane(value)
+				return value
 				 
 		# guess for absolute/relative altitude
-		ABS=self.findMetadata(img,["AbsoluteAltitude"])
-		REL=self.findMetadata(img,["RelativeAltitude"])
+		ABS=FindMetadata(img.metadata.metadata,["AbsoluteAltitude"])
+		REL=FindMetadata(img.metadata.metadata,["RelativeAltitude"])
 		if ABS and REL:
 			elevations=[ParseDouble(image.metadata[ABS])-ParseDouble(image.metadata[REL]) for image in self.images]
 			value=statistics.median(elevations)
 			print("Guessing plane",value, ABS, REL)
-			return self.setPlane(value)
+			return value
 			 
 		# check if exists a plane.txt File
 		plane_filename=self.cache_dir+"/plane.txt"
@@ -369,7 +419,7 @@ class ImageProvider:
 		if plane_content:
 			value=ParseDouble(plane_content)
 			print("Loading plane",value," from plane_filename",plane_filename)
-			return self.setPlane(value)
+			return value
 			 
 		# use google api
 		if True:
@@ -382,17 +432,17 @@ class ImageProvider:
 				value=statistics.median(elevations)
 				print("Guessing plane",value,"from google maps API")
 				SaveTextDocument(plane_filename,str(value))
-				return self.setPlane(value)
+				return value
 
 		# pretend the field is at 0 meter from sea level
 		if True:
 			value=0.0
 			print("Guessing plane",value,"zero sea level as last resort")
-			return self.setPlane(value)
+			return value
 			 
 	# guessUnitScale
 	def guessUnitScale(self, img, names):
-		UNIT=self.findMetadata(img, names)
+		UNIT=FindMetadata(img.metadata, names)
 		if UNIT:  
 			unit=img.metadata[UNIT]
 
@@ -409,7 +459,7 @@ class ImageProvider:
 		print("Guessing focal length...")
 		img=self.images[0]
 
-		FOC=self.findMetadata(img,["FocalLength", "PerspectiveFocalLength"])
+		FOC=FindMetadata(img.metadata,["FocalLength", "PerspectiveFocalLength"])
 		if FOC: 
 			foc=ParseDouble(img.metadata[FOC])
 			scale = self.guessUnitScale(img, ['FocalLengthUnits','PerspectiveFocalLengthUnits'])
@@ -425,21 +475,21 @@ class ImageProvider:
 		print("Guessing sensor size lat")
 		img=self.images[0]
 
-		SIZE=self.findMetadata(img,["SensorSizeLat"])
+		SIZE=FindMetadata(img.metadata,["SensorSizeLat"])
 		if SIZE:
 			size=ParseDouble(img.metadata[SIZE])
 			ret=size
 			print("sensor size lat", ret, SIZE, size)
 			return ret
 
-		PITCH=self.findMetadata(img,["PixelPitch"])
+		PITCH=FindMetadata(img.metadata,["PixelPitch"])
 		if PITCH:
 			pitch=ParseDouble(img.metadata[PITCH])
 			ret=ImageWidth * pitch  * 0.001 # um to mm
 			print("sensor size lat", ret, PITCH, pitch)
 			return ret
 
-		RES=self.findMetadata(img,["FocalPlaneXResolution", "PerspectiveFocalPlaneXResolution"])
+		RES=FindMetadata(img.metadata,["FocalPlaneXResolution", "PerspectiveFocalPlaneXResolution"])
 		if RES:
 			res= ParseDouble(img.metadata[RES]) 
 			scale = self.guessUnitScale(img, ['FocalPlaneResolutionUnit','PerspectiveFocalPlaneResolutionUnit'])
@@ -455,21 +505,21 @@ class ImageProvider:
 		print("Guessing sensor size lon")
 		img=self.images[0]
 
-		SIZE=self.findMetadata(img,["SensorSizeLon"])
+		SIZE=FindMetadata(img.metadata,["SensorSizeLon"])
 		if SIZE:
 			size=ParseDouble(img.metadata[SIZE])
 			ret=slon
 			print("sensor size lon is", ret, SIZE, size)
 			return ret
 
-		PITCH=self.findMetadata(img,["PixelPitch"])
+		PITCH=FindMetadata(img.metadata,["PixelPitch"])
 		if PITCH:
 			pitch=ParseDouble(img.metadata[PITCH]) 
 			ret=ImageHeight * pitch * 0.001 # um to mm
 			print("sensor size lon is", ret, PITCH, pitch)
 			return ret
 
-		RES=self.findMetadata(img,["FocalPlaneYResolution", "PerspectiveFocalPlaneYResolution"])
+		RES=FindMetadata(img.metadata,["FocalPlaneYResolution", "PerspectiveFocalPlaneYResolution"])
 		if RES:
 			res  = ParseDouble(img.metadata[RES]) 
 			scale = self.guessUnitScale(img, ['FocalPlaneResolutionUnit','PerspectiveFocalPlaneResolutionUnit'])
@@ -486,7 +536,7 @@ class ImageProvider:
 		print("Guessing calibration focal...")
 		img=self.images[0]
 
-		CAL=self.findMetadata(img,['CalibratedFocalLength','PerspectiveCalibratedFocalLength'])
+		CAL=FindMetadata(img.metadata,['CalibratedFocalLength','PerspectiveCalibratedFocalLength'])
 		if CAL:
 			cal=ParseDouble(img.metadata[CAL])
 			ret=cal
@@ -501,7 +551,7 @@ class ImageProvider:
 			print("Calibration focal (f2)",ret, "FocalLength", FocalLength, "SensorSizeLat", SensorSizeLat)
 			return ret
 
-		FOV=self.findMetadata(img,["FOV", "Fov", "SensorFOV", "SensorFov"])
+		FOV=FindMetadata(img.metadata,["FOV", "Fov", "SensorFOV", "SensorFov"])
 		if FOV:
 			fov=ParseDouble(img.metadata[FOV])
 			ret=ImageWidth * (0.5 / math.tan(0.5* math.radians(fov)))
@@ -520,8 +570,8 @@ class ImageProvider:
 
 		img=self.images[0]
 
-		CX=self.findMetadata(img,['CalibratedOpticalCenterX'])
-		CY=self.findMetadata(img,['CalibratedOpticalCenterY'])
+		CX=FindMetadata(img.metadata,['CalibratedOpticalCenterX'])
+		CY=FindMetadata(img.metadata,['CalibratedOpticalCenterY'])
 		if CX and CY:
 			cx=ParseDouble(img.metadata[CX])
 			cy=ParseDouble(img.metadata[CY])
@@ -529,7 +579,7 @@ class ImageProvider:
 			self.fixed_central_point=True
 			return (cx,cy)
 
-		PP=self.findMetadata(img,['PrincipalPoint'])
+		PP=FindMetadata(img.metadata,['PrincipalPoint'])
 		if PP:
 			PrincipalPoint = img.metadata[PP].split(',')
 			SensorSizeLat  = self.guessSensorSizeLat(ImageWidth)
@@ -555,8 +605,7 @@ class ImageProvider:
 		f     = self.guessCalibrationFocal(ImageWidth,ImageHeight)
 		cx,cy = self.guessCalibrationCentralPoint(ImageWidth,ImageHeight)
 		print("f",repr(f),"cx",repr(cx),"cy",repr(cy))
-		self.calibration=Calibration(f,cx,cy)
-		print("Guessed calibration",self.calibration.f,self.calibration.cx,self.calibration.cy)	
+		return Calibration(f,cx,cy)
 
 	# createUndistortLenMap	
 	def createUndistortLenMap(self,multi):
@@ -594,28 +643,66 @@ class ImageProvider:
 		print("Loading sensor config...")
 		self.loadSensorCfg()
 
-		print("Loading telemetry...")
-		self.loadTelemetry()
-
+		# example: --telemetry telemetry.dat | metadata.json
+		# NOTE: from telemetry I'm just taking lat,lon,alt,yaw (not other stuff)
+		if GetCommandLineArg("--telemetry"):
+			arg=GetCommandLineArg("--telemetry")
+			self.loadTelemetry(arg)
+					
 		print("Fiding panels...")
 		self.findPanels()
 
 		print("Print metadata...")
 		self.printMetadata(self.images[0])
 
-		print("Guessing gps...")
-		self.guessGPS()
+		# GPS
+		if True:
 
-		print("Guessing plane...")
-		self.guessPlane()
+			print("Loading lat,lon,alt from metadata...")
+			self.loadLatLonAltFromMetadata()
 
-		print("Guessing yaw...")
-		self.guessYaw()
+			print("Loading yaw from metadata...")
+			self.loadYawFromMetadata()
+
+			# fixing yaws and adding yaw_offset
+			if True:
+				print("Normalizing and adding yaw_offset",self.yaw_offset)
+				for img in self.images:
+					img.yaw+=self.yaw_offset
+					while img.yaw > +math.pi: img.yaw-=2*math.pi
+					while img.yaw < -math.pi: img.yaw+=2*math.pi
+					print(img.filenames[0], "yaw_radians",img.yaw, "yaw_degrees",math.degrees(img.yaw))
+
+			# in case there are holes
+			self.interpolateGPS()
+
+		#  assuming altitude is absolute to the 0 earth level and I need to substract altitude of the field
+		# example --plane <value>
+		if True:
+			plane=None
+			if GetCommandLineArg("--plane"):
+				plane=cdouble(GetCommandLineArg("--plane"))
+				print("Setting plane from command line",plane)
+			else:
+				print("Guessing plane from metadata...")
+				plane=self.guessPlane()
+
+			self.setPlane(plane)
 
 		multi=self.generateImage(self.images[0])
 		print("First multi image generated",[(single.shape,single.dtype) for single in multi])
 
-		self.guessCalibration(multi)
+		# example --calibration "f cx cy"
+		if True:
+			calibration=None
+			if GetCommandLineArg("--calibration"):
+				f,cx,cy=[cdouble(it) for it in GetCommandLineArg("--calibration").split()]
+				self.calibration=Calibration(f,cx,cy)
+				print("Setting calibration from command line",f,cx,cy)
+			else:
+				self.calibration=self.guessCalibration(multi)
+				print("Guessed calibration",self.calibration.f,self.calibration.cx,self.calibration.cy)
+		
 		self.createUndistortLenMap(multi)
 		self.findMultiAlignment(multi) 
 
