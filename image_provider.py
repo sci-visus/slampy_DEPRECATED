@@ -405,8 +405,8 @@ class ImageProvider:
 				return value
 				 
 		# guess for absolute/relative altitude
-		ABS=FindMetadata(img.metadata.metadata,["AbsoluteAltitude"])
-		REL=FindMetadata(img.metadata.metadata,["RelativeAltitude"])
+		ABS=FindMetadata(img.metadata,["AbsoluteAltitude"])
+		REL=FindMetadata(img.metadata,["RelativeAltitude"])
 		if ABS and REL:
 			elevations=[ParseDouble(image.metadata[ABS])-ParseDouble(image.metadata[REL]) for image in self.images]
 			value=statistics.median(elevations)
