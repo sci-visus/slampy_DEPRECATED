@@ -30,5 +30,5 @@ class ImageProviderGeneric(ImageProvider):
 
 
 # ///////////////////////////////////////////////////////////////////////////////////////////////
-def CreateInstance(metadata):
+def CreateImageProviderInstance(metadata):
 	return ImageProviderGeneric()
