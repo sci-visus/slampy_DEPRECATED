@@ -28,8 +28,8 @@ class Slam2DBatch:
 		print("done",img.id,"range",ComputeImageRange(ret),"shape",ret.shape, "dtype",ret.dtype,"in",t1.elapsedMsec(),"msec")
 		return ret
 
-	# setImageDirectory
-	def setImageDirectory(self, image_dir, cache_dir=None):
+	# run
+	def run(self, image_dir, cache_dir=None):
 		
 		if not cache_dir:
 			cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
@@ -42,8 +42,12 @@ class Slam2DBatch:
 		self.image_dir=image_dir
 		self.cache_dir=cache_dir
 		os.makedirs(self.cache_dir,exist_ok=True)
-		self.provider=CreateProvider(self.image_dir, self.cache_dir)
-		
+
+		self.provider, all_images=CreateProvider(self.image_dir)
+		self.provider.cache_dir=self.cache_dir
+		self.provider.progress_bar=None	
+		self.provider.setImages(all_images)
+
 		TryRemoveFiles(self.cache_dir+'/~*')
 
 		full=self.generateImage(self.provider.images[0])
@@ -79,7 +83,7 @@ def Main(args):
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
 
 	batch = Slam2DBatch(color_matching=True)
-	batch.setImageDirectory(args.directory)
+	batch.run(args.directory)
 	batch.run()
 	
 	print("All done")

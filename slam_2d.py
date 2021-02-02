@@ -740,14 +740,6 @@ class Slam2DWindow(QMainWindow):
 		print(msg)
 		QMessageBox.information(self, 'Information', msg)
 
-	# chooseImageDirectory
-	def chooseImageDirectory(self,cache_dir=None):
-		print("Showing choose directory dialog")
-		value = QFileDialog.getExistingDirectory(self, "Choose directory...","",QFileDialog.ShowDirsOnly) 
-		if not value: 
-			return
-		self.setImageDirectory(value,cache_dir)	
-
 	# generateImage
 	def generateImage(self,img):
 		t1=Time.now()
@@ -767,8 +759,14 @@ class Slam2DWindow(QMainWindow):
 		self.processEvents()
 
 	# setImageDirectory
-	def setImageDirectory(self, image_dir, cache_dir=None):
-		
+	def setImageDirectory(self, image_dir, cache_dir=None, telemetry=None, plane=None, calibration=None):
+
+		if not image_dir:
+			print("Showing choose directory dialog")
+			image_dir = QFileDialog.getExistingDirectory(self, "Choose directory...","",QFileDialog.ShowDirsOnly) 
+			if not image_dir: 
+				return
+
 		# by default cached files go inside
 		if not cache_dir:
 			cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
@@ -783,8 +781,15 @@ class Slam2DWindow(QMainWindow):
 		self.cache_dir=cache_dir
 		self.image_dir=image_dir
 		os.makedirs(self.cache_dir,exist_ok=True)
-		self.provider=CreateProvider(self.image_dir, self.cache_dir,self.progress_bar)
-		
+
+		self.provider, all_images=CreateProvider(self.image_dir)
+		self.provider.cache_dir=self.cache_dir
+		self.provider.progress_bar=self.progress_bar	
+		self.provider.telemetry=telemetry
+		self.provider.plane=plane
+		self.provider.calibration=calibration
+		self.provider.setImages(all_images)
+
 		TryRemoveFiles(self.cache_dir+'/~*')
 
 		full=self.generateImage(self.provider.images[0])

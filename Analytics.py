@@ -163,16 +163,12 @@ class AnalitycsWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
 		self.createGui()
-		self.setImageDirectory(os.path.abspath(__file__)+"/resources/rededge-mx")		
-
-	# setImageDirectory
-	def setImageDirectory(self,value):
 		self.channels={}
-		self.channels["red"]   = LoadFloatImage(os.path.join(value,"red670nm.tif"))
-		self.channels["blue"]  = LoadFloatImage(os.path.join(value,"blue475nm.tif"))
-		self.channels["green"] = LoadFloatImage(os.path.join(value,"green560nm.tif"))
-		self.channels["re"]    = LoadFloatImage(os.path.join(value,"rededge720nm.tif"))
-		self.channels["nir"]   = LoadFloatImage(os.path.join(value,"nir840nm.tif"))		
+		self.channels["red"]   = LoadFloatImage(os.path.join(os.path.abspath(__file__),"/resources/rededge-mx","red670nm.tif"))
+		self.channels["blue"]  = LoadFloatImage(os.path.join(os.path.abspath(__file__),"/resources/rededge-mx","blue475nm.tif"))
+		self.channels["green"] = LoadFloatImage(os.path.join(os.path.abspath(__file__),"/resources/rededge-mx","green560nm.tif"))
+		self.channels["re"]    = LoadFloatImage(os.path.join(os.path.abspath(__file__),"/resources/rededge-mx","rededge720nm.tif"))
+		self.channels["nir"]   = LoadFloatImage(os.path.join(os.path.abspath(__file__),"/resources/rededge-mx","nir840nm.tif"))		
 		self.setChannel("red")
 		self.setColorBar(0)
 

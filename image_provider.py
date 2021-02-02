@@ -17,14 +17,6 @@ from slampy.metadata_reader          import *
 from slampy.image_utils              import *
 
 
-def GetCommandLineArg(name):
-	if name in sys.argv:
-		index=sys.argv.index(name)
-		return sys.argv[index+1]
-	else:
-		return None
-
-
 def FindMetadata(metadata, names, prefixes=["Telemetry:", "SensorConfig:", "Composite:", "EXIF:", "XMP:"]):
 	for name in names:
 		for prefix in prefixes:
@@ -61,7 +53,6 @@ class ImageProvider:
 		self.width=0
 		self.height=0
 		self.dtype=""	
-		self.calibration=Calibration()
 		self.images=[]
 		self.panels=[]
 		self.fixed_focal_lenght=False
@@ -69,6 +60,9 @@ class ImageProvider:
 		self.multi_sensor_alignment=None
 		self.xmap=None
 		self.ymap=None
+		self.telemetry=None
+		self.plane=None
+		self.calibration=None
 
 		# the offset for all yaws in respect to the north pole
 		# in radians
@@ -643,11 +637,9 @@ class ImageProvider:
 		print("Loading sensor config...")
 		self.loadSensorCfg()
 
-		# example: --telemetry telemetry.dat | metadata.json
 		# NOTE: from telemetry I'm just taking lat,lon,alt,yaw (not other stuff)
-		if GetCommandLineArg("--telemetry"):
-			arg=GetCommandLineArg("--telemetry")
-			self.loadTelemetry(arg)
+		if self.telemetry:
+			self.loadTelemetry(self.telemetry)
 					
 		print("Fiding panels...")
 		self.findPanels()
@@ -677,31 +669,22 @@ class ImageProvider:
 			self.interpolateGPS()
 
 		#  assuming altitude is absolute to the 0 earth level and I need to substract altitude of the field
-		# example --plane <value>
-		if True:
-			plane=None
-			if GetCommandLineArg("--plane"):
-				plane=cdouble(GetCommandLineArg("--plane"))
-				print("Setting plane from command line",plane)
-			else:
-				print("Guessing plane from metadata...")
-				plane=self.guessPlane()
-
-			self.setPlane(plane)
+		if self.plane:
+			print("Setting plane from command line",self.plane)
+		else:
+			print("Guessing plane from metadata...")
+			self.plane=self.guessPlane()
+		self.setPlane(self.plane)
 
 		multi=self.generateImage(self.images[0])
 		print("First multi image generated",[(single.shape,single.dtype) for single in multi])
 
-		# example --calibration "f cx cy"
-		if True:
-			calibration=None
-			if GetCommandLineArg("--calibration"):
-				f,cx,cy=[cdouble(it) for it in GetCommandLineArg("--calibration").split()]
-				self.calibration=Calibration(f,cx,cy)
-				print("Setting calibration from command line",f,cx,cy)
-			else:
-				self.calibration=self.guessCalibration(multi)
-				print("Guessed calibration",self.calibration.f,self.calibration.cx,self.calibration.cy)
+		# calibration "f cx cy"
+		if self.calibration:
+			print("Setting calibration from command line",self.calibration.f,self.calibration.cx,self.calibration.cy)
+		else:
+			self.calibration=self.guessCalibration(multi)
+			print("Guessed calibration",self.calibration.f,self.calibration.cx,self.calibration.cy)
 		
 		self.createUndistortLenMap(multi)
 		self.findMultiAlignment(multi) 
@@ -737,7 +720,7 @@ class ImageProvider:
 
 
 # ////////////////////////////////////////////////////////////////////////////////////////
-def CreateProvider(image_dir, cache_dir,progress_bar=None, image_extensions=('.jpg','.png','.tif','.bmp')):
+def CreateProvider(image_dir, image_extensions=('.jpg','.png','.tif','.bmp')):
 	
 	all_images=[]
 
@@ -801,7 +784,4 @@ def CreateProvider(image_dir, cache_dir,progress_bar=None, image_extensions=('.j
 		raise Exception("cannot find a good provider")
 
 	provider_instance.image_dir=image_dir
-	provider_instance.cache_dir=cache_dir
-	provider_instance.progress_bar=progress_bar	
-	provider_instance.setImages(all_images)
-	return provider_instance
+	return (provider_instance,all_images)

@@ -69,8 +69,7 @@ def Main(args):
 	parser.add_argument("--telemetry"  , type=str, help="Telemetry file for lat,lon,alt,yaw"  , required=False,default="")
 
 	args = parser.parse_args(args[1:])
-	
-	print("Running slam","arguments", repr(args))
+
 
 	# since I'm writing data serially I can disable locks
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
@@ -88,10 +87,30 @@ def Main(args):
 	redirect_log.setCallback(win.printLog)
 	win.showMaximized()
 
-	if args.directory:
-		win.setImageDirectory(args.directory,args.cache_dir)  
-	else:
-	  win.chooseImageDirectory(args.cache_dir)
+	# parse arguments
+	image_directory=args.directory
+	cache_dir=args.cache_dir if args.cache_dir else None
+	telemetry=args.telemetry if args.telemetry else None
+	plane=cdouble(args.plane) if args.plane else None
+
+	calibration=None
+	if args.calibration:
+		f,cx,cy=[cdouble(it) for it in args.calibration.split()]
+		calibration=Calibration(f,cx,cy)
+
+	print("Running slam:")
+	print("   image_directory", repr(image_directory))
+	print("   cache_dir", repr(cache_dir))
+	print("   telemetry", repr(telemetry))
+	print("   plane", repr(plane))
+	print("   calibration", (calibration.f,calibration.cx,calibration.cy) if calibration else None)
+
+	win.setImageDirectory(
+		image_directory, 
+		cache_dir= cache_dir, 
+		telemetry=cache_dir, 
+		plane=plane, 
+		calibration=calibration) 
 
 	HideSplash()
 	QApplication.instance().exec()
