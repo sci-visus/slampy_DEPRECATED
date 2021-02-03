@@ -2,12 +2,16 @@ import os, sys, argparse, datetime
 
 from slampy.slam_2d import Slam2D
 
-from slampy.gui_utils import *
+import importlib
+visus_gui_spec = importlib.util.find_spec("OpenVisus.VisusGuiPy")
+
+if visus_gui_spec is not None:
+        from slampy.gui_utils import *
+        
 from slampy.extract_keypoints import *
 from slampy.google_maps       import *
 from slampy.gps_utils         import *
 from slampy.find_matches      import *
-from slampy.gui_utils         import *
 from slampy.image_provider    import *
 from slampy.image_utils       import *
 

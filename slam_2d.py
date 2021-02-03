@@ -54,7 +54,7 @@ def ComposeImage(v, axis):
 class Slam2D(Slam):
 
 	# constructor
-	def __init__(self,width,height,dtype,calibration,cache_dir, enable_svg=True, enable_color_matching=False):
+	def __init__(self,width,height,dtype,calibration,cache_dir, enable_svg=True, enable_color_matching=False, do_badj=True):
 
 		super(Slam2D,self).__init__()
 
@@ -79,6 +79,7 @@ class Slam2D(Slam):
 
 		self.enable_svg              = enable_svg
 		self.enable_color_matching   = enable_color_matching
+		self.do_badj 				 = do_badj
 
 	# addCamera
 	def addCamera(self,img):
@@ -608,20 +609,25 @@ class Slam2D(Slam):
 		# if it's the first time, I need to find key point matches
 		if self.cameras[0].keypoints.size()==0:
 			self.convertToIdxAndExtractKeyPoints()
-			self.findAllMatches()
-			self.removeDisconnectedCameras()
-			self.debugMatchesGraph()
+			if self.do_badj:
+				self.findAllMatches()
+				self.removeDisconnectedCameras()
+				self.debugMatchesGraph()
 
-		# bundle adjustment
-		tolerances=(10.0*self.ba_tolerance,1.0*self.ba_tolerance)
-		self.startAction(len(tolerances),"Refining solution...")
-		for I,tolerance in enumerate(tolerances):
-			self.advanceAction(I)
-			self.bundleAdjustment(tolerance)
-			self.removeOutlierMatches(self.max_reproj_error * self.width)
-			self.removeDisconnectedCameras()
-			self.removeCamerasWithTooMuchSkew()
-		self.endAction()
+		if self.do_badj:
+			# bundle adjustment
+			tolerances=(10.0*self.ba_tolerance,1.0*self.ba_tolerance)
+			self.startAction(len(tolerances),"Refining solution...")
+			for I,tolerance in enumerate(tolerances):
+				self.advanceAction(I)
+				self.bundleAdjustment(tolerance)
+				self.removeOutlierMatches(self.max_reproj_error * self.width)
+				self.removeDisconnectedCameras()
+				self.removeCamerasWithTooMuchSkew()
+			self.endAction()
+		else:
+			print("Skipping bundle adjustment...")
+
 		self.saveMidx()
 		print("Finished")
 
@@ -636,6 +642,8 @@ def CreatePushButton(text,callback=None, img=None ):
 		ret.setIcon(QtGui.QIcon(img))
 	return ret
 
+if visus_gui_spec is not None:
+	
 # //////////////////////////////////////////////////////////////////////////////
 class Slam2DWindow(QMainWindow):
 	
