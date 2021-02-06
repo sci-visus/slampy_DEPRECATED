@@ -400,14 +400,19 @@ class ImageProvider:
 				 
 		# guess for absolute/relative altitude
 
-		ABS=self.findMetadata(img,["AbsoluteAltitude", "GPSAltitude"])
-		REL=self.findMetadata(img,["RelativeAltitude", "GPSAltitudeRef"])
-		
+		ABS=FindMetadata(img.metadata,["AbsoluteAltitude", "GPSAltitude"])
+		REL=FindMetadata(img.metadata,["RelativeAltitude", "GPSAltitudeRef"])
+
+		print(ABS,REL)
+
 		if ABS and REL:
-			elevations=[ParseDouble(image.metadata[ABS])-ParseDouble(image.metadata[REL]) for image in self.images]
-			value=statistics.median(elevations)
-			print("Guessing plane",value, ABS, REL)
-			return value
+			try:
+				elevations=[ParseDouble(image.metadata[ABS])-ParseDouble(image.metadata[REL]) for image in self.images]
+				value=statistics.median(elevations)
+				print("Guessing plane",value, ABS, REL)
+				return value
+			except:
+				print("Error: not all images contain metadata information for:", ABS, REL)
 			 
 		# check if exists a plane.txt File
 		plane_filename=self.cache_dir+"/plane.txt"
