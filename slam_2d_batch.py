@@ -49,10 +49,10 @@ class Slam2DBatch:
 
 		self.provider, all_images=CreateProvider(self.image_dir)
 		self.provider.cache_dir=self.cache_dir
-#		self.provider.progress_bar=self.progress_bar	
-#		self.provider.telemetry=telemetry
-#		self.provider.plane=plane
-#		self.provider.calibration=calibration
+		# self.provider.progress_bar=self.progress_bar	
+		self.provider.telemetry=None
+		self.provider.plane=None
+		self.provider.calibration=None
 		self.provider.setImages(all_images)
 
 		TryRemoveFiles(self.cache_dir+'/~*')
@@ -73,9 +73,8 @@ class Slam2DBatch:
 
 		self.slam.initialSetup()
 
-	# run
-	#def run(self):
-	#	self.slam.run()
+		self.slam.run()
+		
 
 # ////////////////////////////////////////////////
 def Main(args):
@@ -89,7 +88,7 @@ def Main(args):
 	# since I'm writing data serially I can disable locks
 	os.environ["VISUS_DISABLE_WRITE_LOCK"]="1"
 
-	batch = Slam2DBatch(color_matching=True)
+	batch = Slam2DBatch(color_matching=False)
 	#batch.image_dir=args.directory
 	batch.run(args.directory)
 	
