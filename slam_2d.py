@@ -644,249 +644,249 @@ def CreatePushButton(text,callback=None, img=None ):
 
 if visus_gui_spec is not None:
 	
-# //////////////////////////////////////////////////////////////////////////////
-class Slam2DWindow(QMainWindow):
+	# //////////////////////////////////////////////////////////////////////////////
+	class Slam2DWindow(QMainWindow):
 	
-	# constructor
-	def __init__(self):
-		super(Slam2DWindow, self).__init__()
-		self.image_dir=""
-		self.cache_dir=""
-		self.createGui()
+		# constructor
+		def __init__(self):
+			super(Slam2DWindow, self).__init__()
+			self.image_dir=""
+			self.cache_dir=""
+			self.createGui()
 
-	# createGui
-	def createGui(self):
+		# createGui
+		def createGui(self):
 
-		self.setWindowTitle("Visus SLAM")
+			self.setWindowTitle("Visus SLAM")
 
-		class Buttons : pass
-		self.buttons=Buttons
+			class Buttons : pass
+			self.buttons=Buttons
 		
-		# create widgets
-		self.viewer=Viewer()
-		self.viewer.setMinimal()
-		viewer_subwin = sip.wrapinstance(FromCppQtWidget(self.viewer.c_ptr()), QtWidgets.QMainWindow)	
+			# create widgets
+			self.viewer=Viewer()
+			self.viewer.setMinimal()
+			viewer_subwin = sip.wrapinstance(FromCppQtWidget(self.viewer.c_ptr()), QtWidgets.QMainWindow)	
 		
-		self.google_maps = QWebEngineView()
-		self.progress_bar=ProgressLine()
-		self.preview=PreviewImage()
+			self.google_maps = QWebEngineView()
+			self.progress_bar=ProgressLine()
+			self.preview=PreviewImage()
 
-		self.log = QTextEdit()
-		self.log.setLineWrapMode(QTextEdit.NoWrap)
+			self.log = QTextEdit()
+			self.log.setLineWrapMode(QTextEdit.NoWrap)
 		
-		p = self.log.viewport().palette()
-		p.setColor(QPalette.Base, QtGui.QColor(200,200,200))
-		p.setColor(QPalette.Text, QtGui.QColor(0,0,0))
-		self.log.viewport().setPalette(p)
+			p = self.log.viewport().palette()
+			p.setColor(QPalette.Base, QtGui.QColor(200,200,200))
+			p.setColor(QPalette.Text, QtGui.QColor(0,0,0))
+			self.log.viewport().setPalette(p)
 		
-		main_layout=QVBoxLayout()
+			main_layout=QVBoxLayout()
 		
-		# toolbar
-		toolbar=QHBoxLayout()
-		self.buttons.run_slam=CreatePushButton("Run",lambda: self.run())
+			# toolbar
+			toolbar=QHBoxLayout()
+			self.buttons.run_slam=CreatePushButton("Run",lambda: self.run())
 				
-		toolbar.addWidget(self.buttons.run_slam)
-		toolbar.addLayout(self.progress_bar)
+			toolbar.addWidget(self.buttons.run_slam)
+			toolbar.addLayout(self.progress_bar)
 
-		toolbar.addStretch(1)
-		main_layout.addLayout(toolbar)
+			toolbar.addStretch(1)
+			main_layout.addLayout(toolbar)
 		
-		center = QSplitter(QtCore.Qt.Horizontal)
-		center.addWidget(self.google_maps)
-		center.addWidget(viewer_subwin)
-		center.setSizes([100,200])
+			center = QSplitter(QtCore.Qt.Horizontal)
+			center.addWidget(self.google_maps)
+			center.addWidget(viewer_subwin)
+			center.setSizes([100,200])
 		
-		main_layout.addWidget(center,1)
-		main_layout.addWidget(self.log)
+			main_layout.addWidget(center,1)
+			main_layout.addWidget(self.log)
 
-		central_widget = QFrame()
-		central_widget.setLayout(main_layout)
-		central_widget.setFrameShape(QFrame.NoFrame)
-		self.setCentralWidget(central_widget)
+			central_widget = QFrame()
+			central_widget.setLayout(main_layout)
+			central_widget.setFrameShape(QFrame.NoFrame)
+			self.setCentralWidget(central_widget)
 
-	# run
-	def run(self):
-		self.slam.run()
-		self.preview.hide()
-		self.refreshViewer()
+		# run
+		def run(self):
+			self.slam.run()
+			self.preview.hide()
+			self.refreshViewer()
 
-	# processEvents
-	def processEvents(self):
-		QApplication.processEvents()
-		time.sleep(0.00001)
+		# processEvents
+		def processEvents(self):
+			QApplication.processEvents()
+			time.sleep(0.00001)
 
-	# printLog
-	def printLog(self,text):
-		self.log.moveCursor(QtGui.QTextCursor.End)
-		self.log.insertPlainText(text)
-		self.log.moveCursor(QtGui.QTextCursor.End)	
-		if hasattr(self,"__print_log__") and self.__print_log__.elapsedMsec()<200: return
-		self.__print_log__=Time.now()
-		self.processEvents()
+		# printLog
+		def printLog(self,text):
+			self.log.moveCursor(QtGui.QTextCursor.End)
+			self.log.insertPlainText(text)
+			self.log.moveCursor(QtGui.QTextCursor.End)	
+			if hasattr(self,"__print_log__") and self.__print_log__.elapsedMsec()<200: return
+			self.__print_log__=Time.now()
+			self.processEvents()
 
-	# startAction
-	def startAction(self,N,message):
-		print(message)
-		self.progress_bar.setRange(0,N)
-		self.progress_bar.setMessage(message)
-		self.progress_bar.setValue(0)
-		self.progress_bar.show()
-		self.processEvents()
+		# startAction
+		def startAction(self,N,message):
+			print(message)
+			self.progress_bar.setRange(0,N)
+			self.progress_bar.setMessage(message)
+			self.progress_bar.setValue(0)
+			self.progress_bar.show()
+			self.processEvents()
 
-	# advanceAction
-	def advanceAction(self,I):
-		self.progress_bar.setValue(max(I,self.progress_bar.value()))
-		self.processEvents()
+		# advanceAction
+		def advanceAction(self,I):
+			self.progress_bar.setValue(max(I,self.progress_bar.value()))
+			self.processEvents()
 
-	# endAction
-	def endAction(self):
-		self.progress_bar.hide()
-		self.processEvents()
+		# endAction
+		def endAction(self):
+			self.progress_bar.hide()
+			self.processEvents()
 
-	# showMessageBox
-	def showMessageBox(self,msg):
-		print(msg)
-		QMessageBox.information(self, 'Information', msg)
+		# showMessageBox
+		def showMessageBox(self,msg):
+			print(msg)
+			QMessageBox.information(self, 'Information', msg)
 
-	# generateImage
-	def generateImage(self,img):
-		t1=Time.now()
-		print("Generating image",img.filenames[0])	
-		generated=self.provider.generateImage(img)
-		ret = InterleaveChannels(generated)
-		print("done",img.id,"range",ComputeImageRange(ret),"shape",ret.shape, "dtype",ret.dtype,"in",t1.elapsedMsec()/1000,"msec")
-		return ret
+		# generateImage
+		def generateImage(self,img):
+			t1=Time.now()
+			print("Generating image",img.filenames[0])	
+			generated=self.provider.generateImage(img)
+			ret = InterleaveChannels(generated)
+			print("done",img.id,"range",ComputeImageRange(ret),"shape",ret.shape, "dtype",ret.dtype,"in",t1.elapsedMsec()/1000,"msec")
+			return ret
 
-	# showEnergy
-	def showEnergy(self,camera,energy):
+		# showEnergy
+		def showEnergy(self,camera,energy):
 
-		if self.slam.debug_mode:
-			SaveImage(self.cache_dir+"/generated/%04d.%d.tif" % (camera.id,camera.keypoints.size()), energy)
+			if self.slam.debug_mode:
+				SaveImage(self.cache_dir+"/generated/%04d.%d.tif" % (camera.id,camera.keypoints.size()), energy)
 
-		self.preview.showPreview(energy,"Extracting keypoints image(%d/%d) #keypoints(%d)" % (camera.id,len(self.provider.images),camera.keypoints.size()))
-		self.processEvents()
+			self.preview.showPreview(energy,"Extracting keypoints image(%d/%d) #keypoints(%d)" % (camera.id,len(self.provider.images),camera.keypoints.size()))
+			self.processEvents()
 
-	# setImageDirectory
-	def setImageDirectory(self, image_dir, cache_dir=None, telemetry=None, plane=None, calibration=None):
+		# setImageDirectory
+		def setImageDirectory(self, image_dir, cache_dir=None, telemetry=None, plane=None, calibration=None):
 
-		if not image_dir:
-			print("Showing choose directory dialog")
-			image_dir = QFileDialog.getExistingDirectory(self, "Choose directory...","",QFileDialog.ShowDirsOnly) 
-			if not image_dir: 
+			if not image_dir:
+				print("Showing choose directory dialog")
+				image_dir = QFileDialog.getExistingDirectory(self, "Choose directory...","",QFileDialog.ShowDirsOnly) 
+				if not image_dir: 
+					return
+
+			# by default cached files go inside
+			if not cache_dir:
+				cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
+
+			# avoid recursions
+			if self.image_dir==image_dir and self.cache_dir==cache_dir:
 				return
 
-		# by default cached files go inside
-		if not cache_dir:
-			cache_dir=os.path.abspath(os.path.join(image_dir,"./VisusSlamFiles"))
-
-		# avoid recursions
-		if self.image_dir==image_dir and self.cache_dir==cache_dir:
-			return
-
-		Assert(os.path.isdir(image_dir))
-		self.log.clear()
+			Assert(os.path.isdir(image_dir))
+			self.log.clear()
 		
-		self.cache_dir=cache_dir
-		self.image_dir=image_dir
-		os.makedirs(self.cache_dir,exist_ok=True)
+			self.cache_dir=cache_dir
+			self.image_dir=image_dir
+			os.makedirs(self.cache_dir,exist_ok=True)
 
-		self.provider, all_images=CreateProvider(self.image_dir)
-		self.provider.cache_dir=self.cache_dir
-		self.provider.progress_bar=self.progress_bar	
-		self.provider.telemetry=telemetry
-		self.provider.plane=plane
-		self.provider.calibration=calibration
-		self.provider.setImages(all_images)
+			self.provider, all_images=CreateProvider(self.image_dir)
+			self.provider.cache_dir=self.cache_dir
+			self.provider.progress_bar=self.progress_bar	
+			self.provider.telemetry=telemetry
+			self.provider.plane=plane
+			self.provider.calibration=calibration
+			self.provider.setImages(all_images)
 
-		TryRemoveFiles(self.cache_dir+'/~*')
+			TryRemoveFiles(self.cache_dir+'/~*')
 
-		full=self.generateImage(self.provider.images[0])
-		array=Array.fromNumPy(full,TargetDim=2)
-		width  = array.getWidth()
-		height = array.getHeight()
-		dtype  = array.dtype
+			full=self.generateImage(self.provider.images[0])
+			array=Array.fromNumPy(full,TargetDim=2)
+			width  = array.getWidth()
+			height = array.getHeight()
+			dtype  = array.dtype
 
-		self.slam=Slam2D(width,height,dtype, self.provider.calibration,self.cache_dir)
-		self.slam.debug_mode=False
-		self.slam.generateImage=self.generateImage
-		self.slam.startAction=self.startAction
-		self.slam.advanceAction=self.advanceAction
-		self.slam.endAction=self.endAction
-		self.slam.showEnergy=self.showEnergy
+			self.slam=Slam2D(width,height,dtype, self.provider.calibration,self.cache_dir)
+			self.slam.debug_mode=False
+			self.slam.generateImage=self.generateImage
+			self.slam.startAction=self.startAction
+			self.slam.advanceAction=self.advanceAction
+			self.slam.endAction=self.endAction
+			self.slam.showEnergy=self.showEnergy
 
-		for img in self.provider.images:
-			camera=self.slam.addCamera(img)
-			self.slam.createIdx(camera)
+			for img in self.provider.images:
+				camera=self.slam.addCamera(img)
+				self.slam.createIdx(camera)
 
-		self.slam.initialSetup()
-		self.refreshGoogleMaps()
-		self.refreshViewer()
+			self.slam.initialSetup()
+			self.refreshGoogleMaps()
+			self.refreshViewer()
 
-		self.setWindowTitle("{} num_images({}) width({}) height({}) dtype({}) ".format(
-			image_dir, 
-			len(self.provider.images),
-			self.slam.width, 
-			self.slam.height, 
-			self.slam.dtype.toString()))
+			self.setWindowTitle("{} num_images({}) width({}) height({}) dtype({}) ".format(
+				image_dir, 
+				len(self.provider.images),
+				self.slam.width, 
+				self.slam.height, 
+				self.slam.dtype.toString()))
 
-	# refreshViewer
-	def refreshViewer(self,fieldname="output=voronoi()"):
-		url=self.cache_dir+"/google.midx"
-		self.viewer.open(url)
-		# make sure the RenderNode get almost RGB components
-		self.viewer.setFieldName(fieldname)	
+		# refreshViewer
+		def refreshViewer(self,fieldname="output=voronoi()"):
+			url=self.cache_dir+"/google.midx"
+			self.viewer.open(url)
+			# make sure the RenderNode get almost RGB components
+			self.viewer.setFieldName(fieldname)	
 
-		if True:
+			if True:
 
-			# don't show logs
-			pref=ViewerPreferences()
-			pref.bShowToolbar=False
-			pref.bShowTreeView=False
-			pref.bShowDataflow=False
-			pref.bShowLogs=False
-			self.viewer.setPreferences(pref)
+				# don't show logs
+				pref=ViewerPreferences()
+				pref.bShowToolbar=False
+				pref.bShowTreeView=False
+				pref.bShowDataflow=False
+				pref.bShowLogs=False
+				self.viewer.setPreferences(pref)
 
-			# don't show annotations
-			db=self.viewer.getDataset()
-			db.setEnableAnnotations(False)
+				# don't show annotations
+				db=self.viewer.getDataset()
+				db.setEnableAnnotations(False)
 			
-			# focus on slam dataset (not google world)
-			box=db.getChild("visus").getDatasetBounds().toAxisAlignedBox()
-			self.viewer.getGLCamera().guessPosition(box)
+				# focus on slam dataset (not google world)
+				box=db.getChild("visus").getDatasetBounds().toAxisAlignedBox()
+				self.viewer.getGLCamera().guessPosition(box)
 
 
-		# for Amy: example about processing
-		if False:
-			self.viewer.setScriptingCode(
-"""
-import numpy
-import cv2
-pdim=input.dims.getPointDim()
-img=Array.toNumPy(input,bShareMem=True)
-img=cv2.Laplacian(img,cv2.CV_64F)
-output=Array.fromNumPy(img,TargetDim=pdim)
-""");
+			# for Amy: example about processing
+			if False:
+				self.viewer.setScriptingCode(
+	"""
+	import numpy
+	import cv2
+	pdim=input.dims.getPointDim()
+	img=Array.toNumPy(input,bShareMem=True)
+	img=cv2.Laplacian(img,cv2.CV_64F)
+	output=Array.fromNumPy(img,TargetDim=pdim)
+	""");
 
-	# refreshGoogleMaps
-	def refreshGoogleMaps(self):
+		# refreshGoogleMaps
+		def refreshGoogleMaps(self):
 	
-		images=self.slam.images
-		if not images:
-			return
+			images=self.slam.images
+			if not images:
+				return
 			
-		maps=GoogleMaps()
-		maps.addPolyline([(img.lat,img.lon) for img in images],strokeColor="#FF0000")
+			maps=GoogleMaps()
+			maps.addPolyline([(img.lat,img.lon) for img in images],strokeColor="#FF0000")
 		
-		for I,img in enumerate(images):
-			maps.addMarker(img.filenames[0], img.lat, img.lon, color="green" if I==0 else ("red" if I==len(images)-1 else "blue"))
-			dx=math.cos(img.yaw)*0.00015
-			dy=math.sin(img.yaw)*0.00015
-			maps.addPolyline([(img.lat, img.lon),(img.lat + dx, img.lon + dy)],strokeColor="yellow")
+			for I,img in enumerate(images):
+				maps.addMarker(img.filenames[0], img.lat, img.lon, color="green" if I==0 else ("red" if I==len(images)-1 else "blue"))
+				dx=math.cos(img.yaw)*0.00015
+				dy=math.sin(img.yaw)*0.00015
+				maps.addPolyline([(img.lat, img.lon),(img.lat + dx, img.lon + dy)],strokeColor="yellow")
 
-		content=maps.generateHtml()
+			content=maps.generateHtml()
 		
-		filename=os.path.join(self.cache_dir,"slam.html")
-		SaveTextDocument(filename,content)
-		self.google_maps.load(QUrl.fromLocalFile(filename))	
+			filename=os.path.join(self.cache_dir,"slam.html")
+			SaveTextDocument(filename,content)
+			self.google_maps.load(QUrl.fromLocalFile(filename))	
 
 
