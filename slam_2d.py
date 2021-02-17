@@ -645,8 +645,7 @@ def CreatePushButton(text,callback=None, img=None ):
 if visus_gui_spec is not None:
 	
 	# //////////////////////////////////////////////////////////////////////////////
-	class Slam2DWindow(QMainWindow):
-		
+	class Slam2DWindow(QMainWindow):	
 		# constructor
 		def __init__(self):
 			super(Slam2DWindow, self).__init__()
@@ -661,41 +660,41 @@ if visus_gui_spec is not None:
 
 			class Buttons : pass
 			self.buttons=Buttons
-			
+		
 			# create widgets
 			self.viewer=Viewer()
 			self.viewer.setMinimal()
 			viewer_subwin = sip.wrapinstance(FromCppQtWidget(self.viewer.c_ptr()), QtWidgets.QMainWindow)	
-			
+		
 			self.google_maps = QWebEngineView()
 			self.progress_bar=ProgressLine()
 			self.preview=PreviewImage()
 
 			self.log = QTextEdit()
 			self.log.setLineWrapMode(QTextEdit.NoWrap)
-			
+		
 			p = self.log.viewport().palette()
 			p.setColor(QPalette.Base, QtGui.QColor(200,200,200))
 			p.setColor(QPalette.Text, QtGui.QColor(0,0,0))
 			self.log.viewport().setPalette(p)
-			
+		
 			main_layout=QVBoxLayout()
-			
+		
 			# toolbar
 			toolbar=QHBoxLayout()
 			self.buttons.run_slam=CreatePushButton("Run",lambda: self.run())
-					
+				
 			toolbar.addWidget(self.buttons.run_slam)
 			toolbar.addLayout(self.progress_bar)
 
 			toolbar.addStretch(1)
 			main_layout.addLayout(toolbar)
-			
+		
 			center = QSplitter(QtCore.Qt.Horizontal)
 			center.addWidget(self.google_maps)
 			center.addWidget(viewer_subwin)
 			center.setSizes([100,200])
-			
+		
 			main_layout.addWidget(center,1)
 			main_layout.addWidget(self.log)
 
@@ -785,7 +784,7 @@ if visus_gui_spec is not None:
 
 			Assert(os.path.isdir(image_dir))
 			self.log.clear()
-			
+		
 			self.cache_dir=cache_dir
 			self.image_dir=image_dir
 			os.makedirs(self.cache_dir,exist_ok=True)
@@ -849,7 +848,7 @@ if visus_gui_spec is not None:
 				# don't show annotations
 				db=self.viewer.getDataset()
 				db.setEnableAnnotations(False)
-				
+			
 				# focus on slam dataset (not google world)
 				box=db.getChild("visus").getDatasetBounds().toAxisAlignedBox()
 				self.viewer.getGLCamera().guessPosition(box)
@@ -869,14 +868,14 @@ if visus_gui_spec is not None:
 
 		# refreshGoogleMaps
 		def refreshGoogleMaps(self):
-		
+	
 			images=self.slam.images
 			if not images:
 				return
-				
+			
 			maps=GoogleMaps()
 			maps.addPolyline([(img.lat,img.lon) for img in images],strokeColor="#FF0000")
-			
+		
 			for I,img in enumerate(images):
 				maps.addMarker(img.filenames[0], img.lat, img.lon, color="green" if I==0 else ("red" if I==len(images)-1 else "blue"))
 				dx=math.cos(img.yaw)*0.00015
@@ -884,7 +883,7 @@ if visus_gui_spec is not None:
 				maps.addPolyline([(img.lat, img.lon),(img.lat + dx, img.lon + dy)],strokeColor="yellow")
 
 			content=maps.generateHtml()
-			
+		
 			filename=os.path.join(self.cache_dir,"slam.html")
 			SaveTextDocument(filename,content)
 			self.google_maps.load(QUrl.fromLocalFile(filename))	
