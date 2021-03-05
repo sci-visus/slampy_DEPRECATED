@@ -7,7 +7,7 @@ import time
 
 from OpenVisus                        import *
 
-# Checking if OpenVisus was built with GUI support, if not we do not import any Qt libraries
+# Checking if OpenVisus was built with GUI support, if not we do not import any Qt libraries or GUI stuff
 import importlib
 visus_gui_spec = importlib.util.find_spec("OpenVisus.VisusGuiPy")
 
@@ -24,6 +24,7 @@ if visus_gui_spec is not None:
 	from PyQt5.QtWidgets                  import QWidget
 	from PyQt5.QtWidgets                  import QTableWidget,QTableWidgetItem
 
+	from slampy.gui_utils         import *
 else:
 	print("OpenVisus.VisusGuiPy not found, you are proabbly using a version of OpenVisus without GUI")
 
@@ -31,7 +32,6 @@ from slampy.extract_keypoints import *
 from slampy.google_maps       import *
 from slampy.gps_utils         import *
 from slampy.find_matches      import *
-from slampy.gui_utils         import *
 from slampy.image_provider    import *
 from slampy.image_utils       import *
 
@@ -645,8 +645,7 @@ def CreatePushButton(text,callback=None, img=None ):
 if visus_gui_spec is not None:
 	
 	# //////////////////////////////////////////////////////////////////////////////
-	class Slam2DWindow(QMainWindow):
-	
+	class Slam2DWindow(QMainWindow):	
 		# constructor
 		def __init__(self):
 			super(Slam2DWindow, self).__init__()
