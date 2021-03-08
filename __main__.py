@@ -63,10 +63,18 @@ def Main(args):
 	parser.add_argument("--directory",   type=str, help="Directory of the source images", required=False,default="")
 	parser.add_argument("--cache-dir",   type=str, help="Directory for generated files" , required=False,default="")
 
-	# the following are used inside Image provider
-	parser.add_argument("--plane",       type=str, help="Projecting plane"                    , required=False,default="")
-	parser.add_argument("--calibration", type=str, help="Camera calibration"                  , required=False,default="")
-	parser.add_argument("--telemetry"  , type=str, help="Telemetry file for lat,lon,alt,yaw"  , required=False,default="")
+	# if you already know the probjecting plane
+	parser.add_argument("--plane",       type=str, help="Projecting plane", required=False,default="")
+
+	# If the user knows and specify the calibration from command line
+	parser.add_argument("--calibration", type=str, help="Camera calibration", required=False,default="")
+
+	# To force the telemetry from a JSON file (note VisusSlam save a sequence telemetry to a JSON file so you can reuse it)
+	parser.add_argument("--telemetry"  , type=str, help="Telemetry file for lat,lon,alt,yaw", required=False, default="")
+
+	# To force the physic box to be the same of another sequence
+	# Example: --physic-box 'x1 x2 y1 y2' (i.e. interleaved).
+	parser.add_argument("--physic-box" , type=str, help="Physic box of the MIDX", required=False,default=None) 
 
 	args = parser.parse_args(args[1:])
 
@@ -81,6 +89,7 @@ def Main(args):
 	# -m slampy --directory "D:\GoogleSci\visus_slam\Agricultural_image_collections\AggieAir uav Micasense example\test" (micasense)		
 	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall	
 	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall --plane 1071.61 --calibration "2222.2194 2000.0 1500.0" --telemetry D:/~slam/TaylorGrantSmall/metadata.json
+	# -m slampy --directory D:\GoogleSci\visus_slam\TaylorGrantSmall --cache D:\~slam\TaylorGrantSmall	--physic-box "0.18167907760636232 0.18171277264117514 0.63092731395604973 0.63093683616193741"
 	win=Slam2DWindow()
 
 	redirect_log=RedirectLog()
@@ -92,6 +101,7 @@ def Main(args):
 	cache_dir=args.cache_dir if args.cache_dir else None
 	telemetry=args.telemetry if args.telemetry else None
 	plane=cdouble(args.plane) if args.plane else None
+	physic_box=BoxNd.fromString(args.physic_box) if args.physic_box else None 
 
 	calibration=None
 	if args.calibration:
@@ -104,13 +114,15 @@ def Main(args):
 	print("   telemetry", repr(telemetry))
 	print("   plane", repr(plane))
 	print("   calibration", (calibration.f,calibration.cx,calibration.cy) if calibration else None)
+	print("   physic_box", physic_box.toString() if physic_box else None)
 
 	win.setImageDirectory(
 		image_directory, 
 		cache_dir= cache_dir, 
 		telemetry=cache_dir, 
 		plane=plane, 
-		calibration=calibration) 
+		calibration=calibration,
+		physic_box=physic_box) 
 
 	HideSplash()
 	QApplication.instance().exec()

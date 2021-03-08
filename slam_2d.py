@@ -77,6 +77,8 @@ class Slam2D(Slam):
 		self.images             = []
 		self.extractor          = None
 
+		self.physic_box         = None # you can override using a physic_box from another sequence
+
 		self.enable_svg              = enable_svg
 		self.enable_color_matching   = enable_color_matching
 		self.do_badj 				 = do_badj
@@ -253,18 +255,24 @@ class Slam2D(Slam):
 
 		lat0,lon0=self.images[0].lat,self.images[0].lon
 
+
 		logic_box = self.getQuadsBox()
 
 		# instead of working in range -180,+180 -90,+90 (worldwise ref frame) I normalize the range in [0,1]*[0,1]
 		# physic box is in the range [0,1]*[0,1]
 		# logic_box is in pixel coordinates
-		physic_box=BoxNd.invalid()
-		for I, camera in enumerate(self.cameras):
-			quad=self.computeWorldQuad(camera)
-			for point in quad.points:
-				lat,lon=GPSUtils.localCartesianToGps(point.x, point.y,lat0, lon0)
-				alpha,beta=GPSUtils.gpsToUnit(lat,lon)
-				physic_box.addPoint(PointNd(Point2d(alpha,beta)))
+		# NOTE: I can override the physic box by command line
+		physic_box=self.physic_box
+		if physic_box is not None:
+			print("Using physic_box forced by the user", physic_box.toString())
+		else:
+			physic_box=BoxNd.invalid()
+			for I, camera in enumerate(self.cameras):
+				quad=self.computeWorldQuad(camera)
+				for point in quad.points:
+					lat,lon=GPSUtils.localCartesianToGps(point.x, point.y,lat0, lon0)
+					alpha,beta=GPSUtils.gpsToUnit(lat,lon)
+					physic_box.addPoint(PointNd(Point2d(alpha,beta)))
 
 		logic_centers=[]
 		for I, camera in enumerate(self.cameras):
@@ -766,7 +774,7 @@ if visus_gui_spec is not None:
 			self.processEvents()
 
 		# setImageDirectory
-		def setImageDirectory(self, image_dir, cache_dir=None, telemetry=None, plane=None, calibration=None):
+		def setImageDirectory(self, image_dir, cache_dir=None, telemetry=None, plane=None, calibration=None, physic_box=None):
 
 			if not image_dir:
 				print("Showing choose directory dialog")
@@ -787,6 +795,7 @@ if visus_gui_spec is not None:
 		
 			self.cache_dir=cache_dir
 			self.image_dir=image_dir
+
 			os.makedirs(self.cache_dir,exist_ok=True)
 
 			self.provider, all_images=CreateProvider(self.image_dir)
@@ -812,6 +821,7 @@ if visus_gui_spec is not None:
 			self.slam.advanceAction=self.advanceAction
 			self.slam.endAction=self.endAction
 			self.slam.showEnergy=self.showEnergy
+			self.slam.physic_box=physic_box
 
 			for img in self.provider.images:
 				camera=self.slam.addCamera(img)
